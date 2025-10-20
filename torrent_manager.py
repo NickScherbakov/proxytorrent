@@ -83,8 +83,9 @@ class TorrentManager:
         lt.set_piece_hashes(t, str(file_path.parent))
         
         # Generate torrent file
-        torrent_data = lt.bencode(t.generate())
-        info_hash = hashlib.sha1(lt.bencode(t.generate_dict()[b'info'])).hexdigest()
+        torrent_entry = t.generate()
+        torrent_data = lt.bencode(torrent_entry)
+        info_hash = str(lt.torrent_info(torrent_data).info_hash())
         
         torrent_filename = f"{file_path.stem}_{info_hash[:8]}.torrent"
         torrent_path = TORRENT_DIR / torrent_filename
