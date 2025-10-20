@@ -1,0 +1,6 @@
+aiohttp==3.9.1
+aiofiles==23.2.1
+libtorrent==2.0.9
+requests==2.31.0
+python-dotenv==1.0.0
+pysocks==1.7.1

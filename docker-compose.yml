@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  proxytorrent:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8080
+      - PROXY_HOST=${PROXY_HOST:-}
+      - PROXY_PORT=${PROXY_PORT:-}
+      - PROXY_TYPE=${PROXY_TYPE:-socks5}
+      - PROXY_USERNAME=${PROXY_USERNAME:-}
+      - PROXY_PASSWORD=${PROXY_PASSWORD:-}
+      - DOWNLOAD_DIR=/data/downloads
+      - TORRENT_DIR=/data/torrents
+      - SEED_TIME_HOURS=${SEED_TIME_HOURS:-24}
+    volumes:
+      - ./data/downloads:/data/downloads
+      - ./data/torrents:/data/torrents
+    restart: unless-stopped
