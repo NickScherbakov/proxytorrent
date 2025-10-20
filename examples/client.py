@@ -30,7 +30,7 @@ class ProxyTorrentClient:
         """Generate HMAC signature for request body."""
         if not self.hmac_secret:
             raise ValueError("HMAC secret required for signing")
-        
+
         signature = hmac.new(
             self.hmac_secret.encode(),
             body.encode(),
@@ -47,14 +47,14 @@ class ProxyTorrentClient:
             "method": method,
             "ttl": ttl,
         }
-        
+
         body = json.dumps(payload)
         headers = {"Content-Type": "application/json"}
-        
+
         if self.hmac_secret:
             signature = self._sign_request(body)
             headers["X-Signature"] = signature
-        
+
         response = requests.post(
             f"{self.base_url}/v1/requests",
             data=body,
@@ -71,7 +71,7 @@ class ProxyTorrentClient:
             # Use empty body for signature
             signature = self._sign_request("")
             headers["X-Signature"] = signature
-        
+
         response = requests.get(
             f"{self.base_url}/v1/requests/{request_id}",
             headers=headers,
@@ -85,7 +85,7 @@ class ProxyTorrentClient:
         if self.hmac_secret:
             signature = self._sign_request("")
             headers["X-Signature"] = signature
-        
+
         response = requests.get(
             f"{self.base_url}/v1/requests/{request_id}/magnet",
             headers=headers,
@@ -99,13 +99,13 @@ class ProxyTorrentClient:
         if self.hmac_secret:
             signature = self._sign_request("")
             headers["X-Signature"] = signature
-        
+
         response = requests.get(
             f"{self.base_url}/v1/requests/{request_id}/torrent",
             headers=headers,
         )
         response.raise_for_status()
-        
+
         with open(output_path, "wb") as f:
             f.write(response.content)
 
@@ -114,18 +114,18 @@ class ProxyTorrentClient:
     ) -> dict:
         """Wait for request to complete."""
         start_time = time.time()
-        
+
         while time.time() - start_time < timeout:
             status = self.get_status(request_id)
-            
+
             if status["status"] == "ready":
                 return status
             elif status["status"] == "error":
                 raise RuntimeError(f"Request failed: {status.get('error_message')}")
-            
+
             print(f"Status: {status['status']} ({status['progress']}%)")
             time.sleep(interval)
-        
+
         raise TimeoutError(f"Request did not complete within {timeout} seconds")
 
 
@@ -163,12 +163,12 @@ def main():
         default=3600,
         help="Cache TTL in seconds",
     )
-    
+
     args = parser.parse_args()
-    
+
     # Create client
     client = ProxyTorrentClient(args.base_url, args.hmac_secret)
-    
+
     try:
         # Step 1: Create request
         print(f"Creating fetch request for {args.url}...")
@@ -176,28 +176,28 @@ def main():
         request_id = result["id"]
         print(f"Request created: {request_id}")
         print(f"Status: {result['status']}")
-        
+
         # Step 2: Wait for completion
         print("\nWaiting for completion...")
         status = client.wait_for_completion(request_id)
-        
+
         print("\n✓ Request completed!")
         print(f"  Infohash: {status['infohash']}")
         print(f"  Content size: {status['content_size']} bytes")
         print(f"  Content type: {status['content_type']}")
-        
+
         # Step 3: Get magnet link
         print("\nGetting magnet link...")
         magnet = client.get_magnet(request_id)
         print(f"  Magnet: {magnet['magnet_link']}")
-        
+
         # Step 4: Download torrent file
         print(f"\nDownloading torrent to {args.output}...")
         client.download_torrent(request_id, args.output)
         print(f"✓ Torrent saved to {args.output}")
-        
+
         print("\n✓ Done!")
-        
+
     except Exception as e:
         print(f"\n✗ Error: {e}", file=sys.stderr)
         sys.exit(1)
