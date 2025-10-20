@@ -1,7 +1,6 @@
 """SQLAlchemy database models."""
 import uuid
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import JSON, DateTime, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -24,21 +23,21 @@ class FetchRequest(Base):
     status: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
     url: Mapped[str] = mapped_column(Text, nullable=False)
     method: Mapped[str] = mapped_column(String(10), nullable=False)
-    headers: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
-    body: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    headers: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    body: Mapped[str | None] = mapped_column(Text, nullable=True)
     ttl: Mapped[int] = mapped_column(Integer, nullable=False)
 
     # Content metadata
-    content_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, index=True)
-    content_size: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    content_type: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    content_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    content_type: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # Torrent metadata
-    infohash: Mapped[Optional[str]] = mapped_column(String(40), nullable=True, index=True)
-    torrent_path: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    infohash: Mapped[str | None] = mapped_column(String(40), nullable=True, index=True)
+    torrent_path: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Status tracking
-    error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     progress: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     retry_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
@@ -49,11 +48,11 @@ class FetchRequest(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
     )
-    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # Auth and rate limiting
-    user_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
-    client_ip: Mapped[Optional[str]] = mapped_column(String(45), nullable=True, index=True)
+    user_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    client_ip: Mapped[str | None] = mapped_column(String(45), nullable=True, index=True)
 
     def __repr__(self) -> str:
         """String representation."""

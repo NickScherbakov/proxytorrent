@@ -2,7 +2,6 @@
 import hashlib
 import hmac
 import logging
-from typing import Optional
 
 from fastapi import Header, HTTPException, Request, status
 from fastapi.security import HTTPBearer
@@ -16,8 +15,8 @@ security = HTTPBearer(auto_error=False)
 
 async def verify_hmac_signature(
     request: Request,
-    x_signature: Optional[str] = Header(None),
-) -> Optional[str]:
+    x_signature: str | None = Header(None),
+) -> str | None:
     """
     Verify HMAC signature for request.
 

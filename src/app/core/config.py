@@ -1,7 +1,7 @@
 """Core configuration management using pydantic-settings."""
 import secrets
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -28,13 +28,13 @@ class ProxySettings(BaseSettings):
     proxy_type: Literal["http", "https", "socks5"] = Field(
         default="socks5", description="Proxy type"
     )
-    proxy_host: Optional[str] = Field(default=None, description="Proxy host")
-    proxy_port: Optional[int] = Field(default=None, description="Proxy port")
-    proxy_username: Optional[str] = Field(default=None, description="Proxy username")
-    proxy_password: Optional[str] = Field(default=None, description="Proxy password")
+    proxy_host: str | None = Field(default=None, description="Proxy host")
+    proxy_port: int | None = Field(default=None, description="Proxy port")
+    proxy_username: str | None = Field(default=None, description="Proxy username")
+    proxy_password: str | None = Field(default=None, description="Proxy password")
 
     @property
-    def proxy_url(self) -> Optional[str]:
+    def proxy_url(self) -> str | None:
         """Build proxy URL from settings."""
         if not self.proxy_host or not self.proxy_port:
             return None
@@ -73,7 +73,7 @@ class TorrentSettings(BaseSettings):
 
     private_tracker: bool = Field(default=True, description="Create private torrents")
     piece_size: int = Field(default=256 * 1024, description="Torrent piece size in bytes")
-    announce_url: Optional[str] = Field(
+    announce_url: str | None = Field(
         default=None, description="Tracker announce URL"
     )
     encryption_enabled: bool = Field(default=True, description="Enable torrent encryption")
@@ -114,7 +114,7 @@ class CacheSettings(BaseSettings):
     cache_enabled: bool = Field(default=True, description="Enable request caching")
     default_ttl: int = Field(default=3600, description="Default cache TTL in seconds")
     max_ttl: int = Field(default=86400, description="Maximum cache TTL in seconds")
-    redis_url: Optional[str] = Field(
+    redis_url: str | None = Field(
         default=None, description="Redis URL for distributed cache"
     )
 

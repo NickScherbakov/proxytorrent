@@ -30,7 +30,7 @@ async def test_create_request(client):
         "method": "GET",
         "ttl": 3600,
     }
-    
+
     response = client.post("/v1/requests", json=payload)
     assert response.status_code == 201
     data = response.json()
@@ -48,11 +48,11 @@ async def test_get_request_status(client):
         "method": "GET",
         "ttl": 3600,
     }
-    
+
     create_response = client.post("/v1/requests", json=payload)
     assert create_response.status_code == 201
     request_id = create_response.json()["id"]
-    
+
     # Get status
     response = client.get(f"/v1/requests/{request_id}")
     assert response.status_code == 200
@@ -78,15 +78,15 @@ async def test_cancel_request(client):
         "method": "GET",
         "ttl": 3600,
     }
-    
+
     create_response = client.post("/v1/requests", json=payload)
     assert create_response.status_code == 201
     request_id = create_response.json()["id"]
-    
+
     # Cancel it
     response = client.delete(f"/v1/requests/{request_id}")
     assert response.status_code == 204
-    
+
     # Verify status
     status_response = client.get(f"/v1/requests/{request_id}")
     assert status_response.status_code == 200

@@ -1,9 +1,8 @@
 """Rate limiting middleware."""
 import time
 from collections import defaultdict
-from typing import Optional
 
-from fastapi import HTTPException, Request, status
+from fastapi import HTTPException, status
 
 from app.core.config import settings
 
@@ -35,7 +34,7 @@ class RateLimiter:
         return sum(count for ts, count in entries if ts > cutoff)
 
     def check_rate_limit(
-        self, user_id: Optional[str], client_ip: str
+        self, user_id: str | None, client_ip: str
     ) -> None:
         """
         Check if request is within rate limits.
@@ -97,7 +96,7 @@ class RateLimiter:
 
 
 # Global rate limiter instance
-_rate_limiter: Optional[RateLimiter] = None
+_rate_limiter: RateLimiter | None = None
 
 
 def get_rate_limiter() -> RateLimiter:

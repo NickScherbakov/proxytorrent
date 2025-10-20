@@ -1,7 +1,7 @@
 """Pydantic models for API requests and responses."""
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field, HttpUrl, field_validator
 
@@ -33,17 +33,17 @@ class CreateRequestPayload(BaseModel):
 
     url: HttpUrl = Field(..., description="URL to fetch")
     method: RequestMethod = Field(default=RequestMethod.GET, description="HTTP method")
-    headers: Optional[dict[str, str]] = Field(
+    headers: dict[str, str] | None = Field(
         default=None, description="Custom HTTP headers"
     )
-    body: Optional[str] = Field(default=None, description="Request body (for POST/PUT)")
+    body: str | None = Field(default=None, description="Request body (for POST/PUT)")
     ttl: int = Field(
         default=3600, ge=0, le=86400, description="Cache TTL in seconds"
     )
 
     @field_validator("headers")
     @classmethod
-    def validate_headers(cls, v: Optional[dict[str, str]]) -> Optional[dict[str, str]]:
+    def validate_headers(cls, v: dict[str, str] | None) -> dict[str, str] | None:
         """Validate headers."""
         if v is None:
             return None
@@ -57,7 +57,7 @@ class CreateRequestResponse(BaseModel):
 
     id: str = Field(..., description="Unique request ID")
     status: RequestStatus = Field(..., description="Current status")
-    estimated_ready: Optional[int] = Field(
+    estimated_ready: int | None = Field(
         default=None, description="Estimated time to ready (seconds)"
     )
     created_at: datetime = Field(..., description="Creation timestamp")
@@ -72,14 +72,14 @@ class RequestStatusResponse(BaseModel):
     method: RequestMethod = Field(..., description="HTTP method")
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
-    completed_at: Optional[datetime] = Field(
+    completed_at: datetime | None = Field(
         default=None, description="Completion timestamp"
     )
-    infohash: Optional[str] = Field(default=None, description="Torrent infohash")
-    content_hash: Optional[str] = Field(default=None, description="Content SHA256 hash")
-    content_size: Optional[int] = Field(default=None, description="Content size in bytes")
-    content_type: Optional[str] = Field(default=None, description="Content MIME type")
-    error_message: Optional[str] = Field(default=None, description="Error message if failed")
+    infohash: str | None = Field(default=None, description="Torrent infohash")
+    content_hash: str | None = Field(default=None, description="Content SHA256 hash")
+    content_size: int | None = Field(default=None, description="Content size in bytes")
+    content_type: str | None = Field(default=None, description="Content MIME type")
+    error_message: str | None = Field(default=None, description="Error message if failed")
     progress: int = Field(default=0, ge=0, le=100, description="Progress percentage")
 
 
@@ -105,4 +105,4 @@ class ErrorResponse(BaseModel):
 
     error: str = Field(..., description="Error type")
     message: str = Field(..., description="Error message")
-    detail: Optional[Any] = Field(default=None, description="Additional error details")
+    detail: Any | None = Field(default=None, description="Additional error details")

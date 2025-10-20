@@ -1,7 +1,6 @@
 """BitTorrent seeder service using libtorrent."""
 import logging
 from pathlib import Path
-from typing import Optional
 
 import libtorrent as lt
 
@@ -21,7 +20,7 @@ class Seeder:
 
     def __init__(self) -> None:
         """Initialize seeder."""
-        self._session: Optional[lt.session] = None
+        self._session: lt.session | None = None
         self._torrents: dict[str, lt.torrent_handle] = {}
         self._initialize_session()
 
@@ -179,7 +178,7 @@ class Seeder:
         except Exception as e:
             logger.warning(f"Failed to save resume data for {infohash}: {e}")
 
-    def get_status(self, infohash: str) -> Optional[dict]:
+    def get_status(self, infohash: str) -> dict | None:
         """Get torrent status."""
         if not self._session or infohash not in self._torrents:
             return None
@@ -230,7 +229,7 @@ class Seeder:
 
 
 # Global seeder instance
-_seeder: Optional[Seeder] = None
+_seeder: Seeder | None = None
 
 
 def get_seeder() -> Seeder:

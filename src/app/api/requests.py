@@ -190,8 +190,9 @@ async def get_magnet_link(
         )
 
     # Use packager to build proper magnet link
-    from app.services.packager import TorrentPackage
     from pathlib import Path
+
+    from app.services.packager import TorrentPackage
 
     package = TorrentPackage(
         torrent_path=Path(fetch_request.torrent_path),

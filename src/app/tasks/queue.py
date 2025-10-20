@@ -2,7 +2,6 @@
 import asyncio
 import logging
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -171,7 +170,7 @@ class TaskQueue:
                 finally:
                     self.queue.task_done()
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 # No items in queue, continue
                 continue
             except Exception as e:
@@ -207,7 +206,7 @@ class TaskQueue:
 
 
 # Global task queue instance
-_task_queue: Optional[TaskQueue] = None
+_task_queue: TaskQueue | None = None
 
 
 def get_task_queue() -> TaskQueue:

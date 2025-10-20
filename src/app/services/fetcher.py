@@ -1,7 +1,6 @@
 """HTTP fetcher service with proxy support."""
 import hashlib
 import logging
-from typing import Optional
 
 import aiohttp
 from aiohttp_socks import ProxyConnector
@@ -51,7 +50,7 @@ class FetchResult:
         self.status_code = status_code
         self.headers = headers
         self.url = url
-        self._content_hash: Optional[str] = None
+        self._content_hash: str | None = None
 
     @property
     def content_hash(self) -> str:
@@ -71,7 +70,7 @@ class Fetcher:
 
     def __init__(self) -> None:
         """Initialize fetcher."""
-        self._session: Optional[aiohttp.ClientSession] = None
+        self._session: aiohttp.ClientSession | None = None
 
     async def _get_session(self) -> aiohttp.ClientSession:
         """Get or create aiohttp session."""
@@ -124,8 +123,8 @@ class Fetcher:
         self,
         url: str,
         method: str = "GET",
-        headers: Optional[dict[str, str]] = None,
-        body: Optional[str] = None,
+        headers: dict[str, str] | None = None,
+        body: str | None = None,
     ) -> FetchResult:
         """
         Fetch URL through proxy with security checks.
@@ -209,7 +208,7 @@ class Fetcher:
 
 
 # Global fetcher instance
-_fetcher: Optional[Fetcher] = None
+_fetcher: Fetcher | None = None
 
 
 async def get_fetcher() -> Fetcher:

@@ -2,7 +2,6 @@
 import json
 import logging
 from pathlib import Path
-from typing import Optional
 
 import libtorrent as lt
 
@@ -179,14 +178,14 @@ class Packager:
             logger.error(f"Packaging error for request {request_id}: {e}")
             raise PackageError(f"Failed to package content: {e}") from e
 
-    def get_torrent_path(self, content_hash: str) -> Optional[Path]:
+    def get_torrent_path(self, content_hash: str) -> Path | None:
         """Get torrent file path for content hash."""
         torrent_file = settings.storage.torrent_path / f"{content_hash}.torrent"
         return torrent_file if torrent_file.exists() else None
 
 
 # Global packager instance
-_packager: Optional[Packager] = None
+_packager: Packager | None = None
 
 
 def get_packager() -> Packager:

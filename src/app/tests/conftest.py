@@ -12,7 +12,7 @@ def app():
     # Disable auth for tests
     settings.security.auth_enabled = False
     settings.rate_limit.rate_limit_enabled = False
-    
+
     return create_app()
 
 
@@ -26,7 +26,7 @@ def client(app):
 def mock_fetcher(mocker):
     """Mock fetcher for tests."""
     from app.services.fetcher import FetchResult
-    
+
     mock_result = FetchResult(
         content=b"test content",
         content_type="text/plain",
@@ -34,7 +34,7 @@ def mock_fetcher(mocker):
         headers={"content-type": "text/plain"},
         url="http://example.com",
     )
-    
+
     mock = mocker.patch("app.services.fetcher.Fetcher.fetch")
     mock.return_value = mock_result
     return mock
