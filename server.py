@@ -114,7 +114,24 @@ class ProxyTorrentService:
         filename = request.match_info['filename']
         from config import TORRENT_DIR
         
-        torrent_path = TORRENT_DIR / filename
+        # Sanitize filename to prevent path traversal attacks
+        # Only allow alphanumeric, dots, dashes, and underscores
+        import re
+        if not re.match(r'^[a-zA-Z0-9._-]+\.torrent$', filename):
+            return web.json_response(
+                {'error': 'Invalid filename'},
+                status=400
+            )
+        
+        # Ensure the path is within TORRENT_DIR
+        torrent_path = (TORRENT_DIR / filename).resolve()
+        try:
+            torrent_path.relative_to(TORRENT_DIR.resolve())
+        except ValueError:
+            return web.json_response(
+                {'error': 'Invalid path'},
+                status=400
+            )
         
         if not torrent_path.exists():
             return web.json_response(
