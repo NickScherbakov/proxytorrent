@@ -1,217 +1,270 @@
 # ProxyTorrent - Quick Start Guide
 
-## What is ProxyTorrent?
+Get ProxyTorrent up and running in 5 minutes!
 
-ProxyTorrent is a service that fetches content through a proxy/VPN, packages it as a BitTorrent file, and seeds it automatically. It's perfect for:
-- Privacy-focused content distribution
-- Creating torrents from web resources
-- Bandwidth-efficient content sharing
-- Geo-restricted content access (with proxy)
+## Prerequisites
 
-## Installation
+- Docker and Docker Compose installed
+- 2GB+ RAM available
+- Internet connection
 
-### Option 1: Docker (Recommended)
+## 1. Clone Repository
+
 ```bash
-# Clone the repository
 git clone https://github.com/NickScherbakov/proxytorrent.git
 cd proxytorrent
+```
 
-# Start the service
+## 2. Start Service
+
+For **testing/development** (no authentication):
+
+```bash
 docker-compose up -d
-
-# Check if it's running
-curl http://localhost:8080/health
 ```
 
-### Option 2: Python
-```bash
-# Clone and install
-git clone https://github.com/NickScherbakov/proxytorrent.git
-cd proxytorrent
-pip install -r requirements.txt
+For **production** (with authentication):
 
-# Run the service
-python server.py
+```bash
+# Create .env file
+cp .env.example .env
+
+# Edit configuration (set SECURITY__AUTH_ENABLED=true)
+nano .env
+
+# Start service
+docker-compose up -d
 ```
 
-## Basic Usage
+## 3. Verify Service
 
-### 1. Fetch and Create Torrent
 ```bash
-curl -X POST http://localhost:8080/fetch \
+# Check health
+curl http://localhost:8000/v1/health
+
+# Expected output:
+# {
+#   "status": "healthy",
+#   "version": "0.1.0",
+#   "uptime": 5.23,
+#   "checks": { ... }
+# }
+```
+
+## 4. Create Your First Request
+
+### Without Authentication (Development)
+
+```bash
+# Create fetch request
+curl -X POST http://localhost:8000/v1/requests \
   -H "Content-Type: application/json" \
   -d '{
-    "url": "https://example.com/file.zip",
-    "filename": "myfile.zip"
+    "url": "http://httpbin.org/html",
+    "method": "GET",
+    "ttl": 3600
   }'
+
+# Response:
+# {
+#   "id": "550e8400-e29b-41d4-a716-446655440000",
+#   "status": "queued",
+#   "estimated_ready": 60,
+#   "created_at": "2025-10-20T19:00:00Z"
+# }
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "info_hash": "abc123def456...",
-  "torrent_file": "/torrents/myfile_abc123de.torrent"
-}
-```
-
-### 2. Download the Torrent File
-```bash
-curl -O http://localhost:8080/torrents/myfile_abc123de.torrent
-```
-
-### 3. Check Status
-```bash
-curl http://localhost:8080/status/abc123def456...
-```
-
-### 4. Use the Torrent
-Open the `.torrent` file in your favorite BitTorrent client (qBittorrent, Transmission, etc.)
-
-## Configuration
-
-Edit `.env` or set environment variables:
+### With Authentication (Production)
 
 ```bash
-# Basic settings
-HOST=0.0.0.0
-PORT=8080
+# Set your secret from .env
+HMAC_SECRET="your-secret-from-env-file"
 
-# Proxy configuration (optional but recommended)
-PROXY_HOST=your-vpn-server.com
-PROXY_PORT=1080
-PROXY_TYPE=socks5
-PROXY_USERNAME=user
-PROXY_PASSWORD=pass
+# Create request body
+BODY='{"url":"http://httpbin.org/html","method":"GET","ttl":3600}'
 
-# Storage
-DOWNLOAD_DIR=/tmp/proxytorrent/downloads
-TORRENT_DIR=/tmp/proxytorrent/torrents
+# Compute signature
+SIGNATURE=$(echo -n "$BODY" | openssl dgst -sha256 -hmac "$HMAC_SECRET" | cut -d' ' -f2)
 
-# Seeding
-SEED_TIME_HOURS=24
-```
-
-## Common Tasks
-
-### Add Trackers to Improve Connectivity
-```bash
-curl -X POST http://localhost:8080/fetch \
+# Make authenticated request
+curl -X POST http://localhost:8000/v1/requests \
   -H "Content-Type: application/json" \
-  -d '{
-    "url": "https://example.com/file.zip",
-    "trackers": [
-      "udp://tracker.opentrackr.org:1337/announce",
-      "udp://open.demonii.com:1337/announce"
-    ]
-  }'
+  -H "X-Signature: $SIGNATURE" \
+  -d "$BODY"
 ```
 
-### Use with VPN
-1. Set up your VPN/proxy server
-2. Configure proxy settings in `.env`
-3. Restart the service
-4. All fetches now go through the proxy!
+## 5. Monitor Progress
 
-### Monitor Active Torrents
 ```bash
-# Health check shows number of active torrents
-curl http://localhost:8080/health
+# Replace with your request ID
+REQUEST_ID="550e8400-e29b-41d4-a716-446655440000"
+
+# Check status
+curl http://localhost:8000/v1/requests/$REQUEST_ID
+
+# Response shows progress:
+# {
+#   "id": "...",
+#   "status": "ready",  # queued → fetching → packaging → seeding → ready
+#   "progress": 100,
+#   ...
+# }
 ```
 
-## Example with Python Client
+## 6. Download Torrent
 
-```python
-import requests
+Once status is "ready":
 
-# Fetch content
-response = requests.post('http://localhost:8080/fetch', json={
-    'url': 'https://example.com/file.pdf',
-    'filename': 'document.pdf'
-})
+```bash
+# Get magnet link
+curl http://localhost:8000/v1/requests/$REQUEST_ID/magnet
 
-result = response.json()
-print(f"Info hash: {result['info_hash']}")
+# Response:
+# {
+#   "id": "...",
+#   "magnet_link": "magnet:?xt=urn:btih:...",
+#   "infohash": "..."
+# }
 
-# Download torrent file
-torrent_url = f"http://localhost:8080{result['torrent_file']}"
-torrent = requests.get(torrent_url)
-with open('document.torrent', 'wb') as f:
-    f.write(torrent.content)
+# Download .torrent file
+curl http://localhost:8000/v1/requests/$REQUEST_ID/torrent \
+  -o downloaded.torrent
+```
 
-print("Torrent file saved! Open it in your BitTorrent client.")
+## 7. Use Example Scripts
+
+### Python Client
+
+```bash
+# Install requests
+pip install requests
+
+# Run client
+./examples/client.py \
+  --url "http://example.com" \
+  --output example.torrent
+
+# With authentication
+./examples/client.py \
+  --url "http://example.com" \
+  --hmac-secret "your-secret" \
+  --output example.torrent
+```
+
+### Shell Script
+
+```bash
+# Set environment
+export BASE_URL="http://localhost:8000"
+export HMAC_SECRET="your-secret"
+
+# Run script
+./examples/curl_example.sh
+```
+
+## Common Commands
+
+### View Logs
+```bash
+docker-compose logs -f proxytorrent
+```
+
+### Stop Service
+```bash
+docker-compose down
+```
+
+### Restart Service
+```bash
+docker-compose restart proxytorrent
+```
+
+### Update Service
+```bash
+git pull
+docker-compose down
+docker-compose build --no-cache
+docker-compose up -d
 ```
 
 ## Troubleshooting
 
 ### Service won't start
 ```bash
-# Check if port is in use
-sudo lsof -i :8080
+# Check logs
+docker-compose logs proxytorrent
 
-# View logs
-docker-compose logs -f
+# Verify permissions
+ls -la data/
 ```
 
-### Cannot fetch URLs
+### Can't connect
 ```bash
-# Test connectivity
-curl https://example.com
+# Check if running
+docker-compose ps
 
-# Check proxy settings
-cat .env | grep PROXY
+# Test from inside container
+docker-compose exec proxytorrent curl -I http://localhost:8000/v1/health
 ```
 
-### Torrent not seeding
-- Check firewall settings
-- Ensure ports are open for BitTorrent
-- Wait a few minutes for DHT to propagate
-- Add trackers to the request
+### Authentication errors
+```bash
+# Verify auth is disabled for testing
+grep AUTH_ENABLED docker-compose.yml
 
-## Project Structure
-
+# Or check .env
+cat .env | grep AUTH_ENABLED
 ```
-proxytorrent/
-├── server.py              # Main API server
-├── config.py              # Configuration management
-├── fetcher.py             # Content fetching with proxy
-├── torrent_manager.py     # Torrent creation and seeding
-├── example_client.py      # Example usage script
-├── test_unit.py           # Unit tests
-├── requirements.txt       # Python dependencies
-├── Dockerfile             # Docker image
-├── docker-compose.yml     # Docker Compose config
-├── README.md              # Full documentation
-├── DEPLOYMENT.md          # Deployment guide
-└── SECURITY.md            # Security documentation
-```
-
-## API Endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/fetch` | Fetch content and create torrent |
-| GET | `/status/{info_hash}` | Get torrent status |
-| GET | `/torrents/{filename}` | Download .torrent file |
-| GET | `/health` | Health check |
 
 ## Next Steps
 
-1. **Read the Full Documentation**: Check `README.md` for detailed API reference
-2. **Deploy to Production**: See `DEPLOYMENT.md` for deployment guides
-3. **Security**: Review `SECURITY.md` for security best practices
-4. **Contribute**: Submit issues or PRs on GitHub
+- 📖 Read [README.md](README.md) for full documentation
+- 🚀 See [DEPLOYMENT.md](DEPLOYMENT.md) for production setup
+- 🏗️ Check [ARCHITECTURE.md](ARCHITECTURE.md) for system design
+- 🔒 Review [SECURITY.md](SECURITY.md) for security best practices
+
+## API Quick Reference
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/v1/requests` | POST | Create fetch request |
+| `/v1/requests/{id}` | GET | Get status |
+| `/v1/requests/{id}/torrent` | GET | Download .torrent |
+| `/v1/requests/{id}/magnet` | GET | Get magnet link |
+| `/v1/requests/{id}` | DELETE | Cancel request |
+| `/v1/health` | GET | Health check |
+
+## Configuration Quick Reference
+
+Set in `.env` or `docker-compose.yml`:
+
+```bash
+# Security
+SECURITY__AUTH_ENABLED=false          # Disable for testing
+SECURITY__HMAC_SECRET=your-secret     # Set strong secret
+
+# Proxy (optional)
+PROXY__PROXY_ENABLED=false            # Enable for VPN/proxy
+PROXY__PROXY_TYPE=socks5              # socks5, http, https
+PROXY__PROXY_HOST=your-proxy-host
+PROXY__PROXY_PORT=1080
+
+# Limits
+FETCHER__MAX_SIZE=52428800           # 50 MiB
+FETCHER__CONNECT_TIMEOUT=10          # seconds
+FETCHER__READ_TIMEOUT=30             # seconds
+
+# Rate Limiting
+RATE_LIMIT__REQUESTS_PER_MINUTE=60
+RATE_LIMIT__REQUESTS_PER_HOUR=1000
+```
 
 ## Support
 
 - **Issues**: https://github.com/NickScherbakov/proxytorrent/issues
-- **Documentation**: See README.md, DEPLOYMENT.md, SECURITY.md
-- **Example**: Run `python example_client.py` for a working example
-
-## Legal Notice
-
-⚠️ **Important**: Only use this service for content you have the right to distribute. Respect copyright laws and terms of service.
+- **Discussions**: Use GitHub Discussions
+- **Security**: See [SECURITY.md](SECURITY.md)
 
 ---
 
-**ProxyTorrent** - Private fetch, public share 🔒➡️🌐
+**Happy torrenting! 🎉**

@@ -3,20 +3,73 @@ version: '3.8'
 services:
   proxytorrent:
     build: .
+    container_name: proxytorrent
     ports:
-      - "8080:8080"
+      - "8000:8000"
     environment:
-      - HOST=0.0.0.0
-      - PORT=8080
-      - PROXY_HOST=${PROXY_HOST:-}
-      - PROXY_PORT=${PROXY_PORT:-}
-      - PROXY_TYPE=${PROXY_TYPE:-socks5}
-      - PROXY_USERNAME=${PROXY_USERNAME:-}
-      - PROXY_PASSWORD=${PROXY_PASSWORD:-}
-      - DOWNLOAD_DIR=/data/downloads
-      - TORRENT_DIR=/data/torrents
-      - SEED_TIME_HOURS=${SEED_TIME_HOURS:-24}
+      # Security
+      - SECURITY__AUTH_ENABLED=false  # Set to true in production
+      - SECURITY__HMAC_SECRET=${HMAC_SECRET:-change-me-in-production}
+      
+      # Proxy configuration (optional)
+      - PROXY__PROXY_ENABLED=${PROXY_ENABLED:-false}
+      - PROXY__PROXY_TYPE=${PROXY_TYPE:-socks5}
+      - PROXY__PROXY_HOST=${PROXY_HOST:-}
+      - PROXY__PROXY_PORT=${PROXY_PORT:-}
+      
+      # Database
+      - DATABASE__DATABASE_URL=sqlite+aiosqlite:////app/data/proxytorrent.db
+      
+      # Storage
+      - STORAGE__BASE_PATH=/app/data
+      - STORAGE__CONTENT_PATH=/app/data/content
+      - STORAGE__TORRENT_PATH=/app/data/torrents
+      - STORAGE__RESUME_PATH=/app/data/resume
+      
+      # Monitoring
+      - MONITORING__LOG_LEVEL=${LOG_LEVEL:-INFO}
+    
     volumes:
-      - ./data/downloads:/data/downloads
-      - ./data/torrents:/data/torrents
+      - ./data:/app/data
+    
     restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/v1/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: PostgreSQL database (comment out sqlite above if using)
+  # postgres:
+  #   image: postgres:15-alpine
+  #   container_name: proxytorrent-db
+  #   environment:
+  #     - POSTGRES_USER=proxytorrent
+  #     - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-change-me}
+  #     - POSTGRES_DB=proxytorrent
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   restart: unless-stopped
+
+  # Optional: Redis for distributed caching
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: proxytorrent-redis
+  #   restart: unless-stopped
+
+  # Optional: OpenVPN client for proxy
+  # vpn:
+  #   image: dperson/openvpn-client
+  #   container_name: proxytorrent-vpn
+  #   cap_add:
+  #     - NET_ADMIN
+  #   devices:
+  #     - /dev/net/tun
+  #   volumes:
+  #     - ./vpn:/vpn:ro
+  #   restart: unless-stopped
+
+volumes:
+  postgres_data:
