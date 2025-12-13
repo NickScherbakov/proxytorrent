@@ -380,7 +380,7 @@ docker-compose down --timeout 60
 
 **Недостатки:**
 - ❌ Пока нет UI
-- ❌ Меньше features
+- ❌ Меньше функций
 - ❌ Требует self-hosting
 
 ## Запросы от пользователей (Feature Requests)
