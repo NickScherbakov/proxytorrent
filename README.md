@@ -32,6 +32,26 @@ Client → POST /v1/requests → Queue → Fetcher (via Proxy) → Packager → 
 Client ← GET /v1/requests/{id}/torrent ←──────────────────────────────────────────┘
 ```
 
+## Documentation
+
+### 📚 Project Handbook
+
+A comprehensive Russian-language handbook is available at **[docs/handbook/](docs/handbook/README.md)**. The handbook covers:
+
+- **Миссия и цели проекта** — why ProxyTorrent exists and what problems it solves
+- **Архитектура системы** — detailed architecture with Mermaid diagrams
+- **Жизненный цикл запроса** — complete request processing flow
+- **API справочник** — all REST endpoints with examples
+- **Конфигурация** — comprehensive guide to all settings from `.env.example`
+- **Модель данных** — database schema and content-addressable storage
+- **Безопасность** — authentication, authorization, and security best practices
+- **Развёртывание** — step-by-step deployment guides for dev/staging/production
+- **Тестирование** — testing strategy, running tests, and CI/CD
+- **Roadmap** — known limitations and future plans
+- **История изменений** — PR-based changelog with results and validation
+
+**[→ Перейти к справочнику](docs/handbook/README.md)**
+
 ## Quick Start
 
 ### Prerequisites
