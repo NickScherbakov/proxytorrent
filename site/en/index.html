@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProxyTorrent - Secure Content Fetching & P2P Distribution</title>
+    <meta name="description" content="ProxyTorrent fetches content through proxies/VPNs, packages it into private torrents, and distributes via BitTorrent. Built with FastAPI and libtorrent.">
+    <meta name="keywords" content="proxy, torrent, bittorrent, vpn, fastapi, privacy, p2p, content distribution">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://nickscherbakov.github.io/proxytorrent/en/">
+    <meta property="og:title" content="ProxyTorrent - Secure Content Fetching & P2P Distribution">
+    <meta property="og:description" content="Fetch content through proxies/VPNs and distribute via BitTorrent. FastAPI REST API with libtorrent seeding.">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://nickscherbakov.github.io/proxytorrent/en/">
+    <meta property="twitter:title" content="ProxyTorrent - Secure Content Fetching & P2P Distribution">
+    <meta property="twitter:description" content="Fetch content through proxies/VPNs and distribute via BitTorrent. FastAPI REST API with libtorrent seeding.">
+    
+    <link rel="stylesheet" href="../assets/style.css">
+</head>
+<body lang="en">
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="#" class="logo">
+                    <span class="logo-icon">🌐</span>
+                    <span>ProxyTorrent</span>
+                </a>
+                <nav>
+                    <ul>
+                        <li><a href="#why">Why</a></li>
+                        <li><a href="#how">How it Works</a></li>
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#use-cases">Use Cases</a></li>
+                        <li><a href="#get-started">Get Started</a></li>
+                        <li><a href="https://github.com/NickScherbakov/proxytorrent" target="_blank">GitHub</a></li>
+                    </ul>
+                </nav>
+                <div class="lang-switcher">
+                    <a href="../en/" class="active">EN</a>
+                    <a href="../ru/">RU</a>
+                    <a href="../ar/">AR</a>
+                    <a href="../zh/">ZH</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="container">
+                <h1>Secure Content Fetching & P2P Distribution</h1>
+                <p>
+                    ProxyTorrent fetches content through isolated proxies or VPNs, packages it into private torrents, 
+                    and seeds it via libtorrent—all exposed through a clean FastAPI REST interface.
+                </p>
+                <div class="hero-cta">
+                    <a href="#get-started" class="btn btn-primary">Get Started</a>
+                    <a href="https://github.com/NickScherbakov/proxytorrent" target="_blank" class="btn btn-secondary">View on GitHub</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Why Section -->
+        <section id="why">
+            <div class="container">
+                <h2>Why ProxyTorrent?</h2>
+                <div class="grid grid-3">
+                    <div class="card">
+                        <span class="card-icon">🔒</span>
+                        <h3>Privacy First</h3>
+                        <p>All content fetching happens through your configured proxy or VPN, keeping your real IP hidden and ensuring privacy.</p>
+                    </div>
+                    <div class="card">
+                        <span class="card-icon">📦</span>
+                        <h3>Efficient Distribution</h3>
+                        <p>Content is packaged into private BitTorrent files, enabling efficient P2P distribution with built-in seeding.</p>
+                    </div>
+                    <div class="card">
+                        <span class="card-icon">⚡</span>
+                        <h3>Modern API</h3>
+                        <p>Clean FastAPI REST interface with async processing, authentication, rate limiting, and comprehensive monitoring.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- How It Works Section -->
+        <section id="how">
+            <div class="container">
+                <h2>How It Works</h2>
+                <div class="steps">
+                    <div class="step">
+                        <h3>Request</h3>
+                        <p>Client sends a fetch request to the REST API with target URL, method, headers, and optional authentication.</p>
+                    </div>
+                    <div class="step">
+                        <h3>Fetch via Proxy</h3>
+                        <p>Background worker fetches content through configured SOCKS5/HTTP proxy or VPN, validating size and content type.</p>
+                    </div>
+                    <div class="step">
+                        <h3>Package</h3>
+                        <p>Content is stored using content-addressable hashing and packaged into a private torrent file using libtorrent.</p>
+                    </div>
+                    <div class="step">
+                        <h3>Seed</h3>
+                        <p>Built-in BitTorrent seeder starts distributing the content with encryption and configurable upload limits.</p>
+                    </div>
+                    <div class="step">
+                        <h3>Deliver</h3>
+                        <p>Client retrieves the .torrent file or magnet link and downloads content via BitTorrent protocol.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section id="features">
+            <div class="container">
+                <h2>Features</h2>
+                <div class="grid grid-2">
+                    <div class="card">
+                        <h3>🔐 Secure Fetching</h3>
+                        <p>Fetch content through configurable SOCKS5/HTTP proxies or VPN with SSL verification and size limits.</p>
+                    </div>
+                    <div class="card">
+                        <h3>🎯 Private Torrents</h3>
+                        <p>Create private torrents with custom trackers, encryption, and content-addressable deduplication.</p>
+                    </div>
+                    <div class="card">
+                        <h3>🔑 Authentication</h3>
+                        <p>HMAC-SHA256 signature verification and Bearer token support for secure API access.</p>
+                    </div>
+                    <div class="card">
+                        <h3>⏱️ Rate Limiting</h3>
+                        <p>Per-user and per-IP rate limits to prevent abuse and ensure fair resource allocation.</p>
+                    </div>
+                    <div class="card">
+                        <h3>🔄 Async Processing</h3>
+                        <p>Background task queue with worker pool for efficient concurrent request processing.</p>
+                    </div>
+                    <div class="card">
+                        <h3>🐳 Docker Ready</h3>
+                        <p>Fully containerized with docker-compose for easy deployment and VPN integration.</p>
+                    </div>
+                    <div class="card">
+                        <h3>📊 Monitoring</h3>
+                        <p>Health checks, structured logging, and progress tracking for all fetch requests.</p>
+                    </div>
+                    <div class="card">
+                        <h3>💾 Smart Storage</h3>
+                        <p>Content-addressable storage with SHA256 hashing prevents duplication and ensures integrity.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Use Cases Section -->
+        <section id="use-cases">
+            <div class="container">
+                <h2>Use Cases</h2>
+                <div class="grid grid-2">
+                    <div class="card">
+                        <span class="card-icon">📡</span>
+                        <h3>Distributed Content Delivery</h3>
+                        <p>Fetch content once through proxy and distribute to multiple clients efficiently via BitTorrent.</p>
+                    </div>
+                    <div class="card">
+                        <span class="card-icon">🌍</span>
+                        <h3>Geo-Restricted Content</h3>
+                        <p>Access region-locked content through proxies while maintaining privacy and security.</p>
+                    </div>
+                    <div class="card">
+                        <span class="card-icon">🔬</span>
+                        <h3>Research & Archiving</h3>
+                        <p>Collect and preserve web content with verifiable integrity and efficient distribution.</p>
+                    </div>
+                    <div class="card">
+                        <span class="card-icon">🏢</span>
+                        <h3>Enterprise Caching</h3>
+                        <p>Cache external resources privately and distribute within your network via P2P.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Get Started Section -->
+        <section id="get-started">
+            <div class="container">
+                <h2>Get Started</h2>
+                
+                <h3>Quick Start with Docker</h3>
+                <pre><code># Clone the repository
+git clone https://github.com/NickScherbakov/proxytorrent.git
+cd proxytorrent
+
+# Start the service
+docker-compose up -d
+
+# Check health
+curl http://localhost:8000/v1/health</code></pre>
+
+                <h3>Create Your First Request</h3>
+                <pre><code># Create fetch request
+curl -X POST http://localhost:8000/v1/requests \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "http://example.com",
+    "method": "GET",
+    "ttl": 3600
+  }'
+
+# Get request status
+curl http://localhost:8000/v1/requests/{id}
+
+# Download torrent file
+curl http://localhost:8000/v1/requests/{id}/torrent -o file.torrent</code></pre>
+
+                <h3>Configuration</h3>
+                <pre><code># Create .env file
+SECURITY__AUTH_ENABLED=true
+SECURITY__HMAC_SECRET=your-secret-key
+
+# Proxy settings
+PROXY__PROXY_ENABLED=true
+PROXY__PROXY_TYPE=socks5
+PROXY__PROXY_HOST=your-proxy-host
+PROXY__PROXY_PORT=1080
+
+# Storage
+STORAGE__BASE_PATH=./data</code></pre>
+
+                <div class="grid grid-2" style="margin-top: 2rem;">
+                    <div class="card">
+                        <h3>📚 Documentation</h3>
+                        <p>
+                            <a href="../../README.md">README</a> • 
+                            <a href="../../QUICKSTART.md">Quick Start</a> • 
+                            <a href="../../ARCHITECTURE.md">Architecture</a> • 
+                            <a href="../../DEPLOYMENT.md">Deployment</a>
+                        </p>
+                        <p style="margin-top: 1rem;">
+                            <a href="../../docs/handbook/README.md">📖 Russian Handbook</a>
+                        </p>
+                    </div>
+                    <div class="card">
+                        <h3>💻 Examples</h3>
+                        <p>
+                            <a href="../../examples/client.py">Python Client</a> • 
+                            <a href="../../examples/curl_example.sh">Bash Script</a>
+                        </p>
+                        <p style="margin-top: 1rem;">
+                            Check the <a href="../../examples/">examples/</a> directory for more.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Documentation</h4>
+                    <ul>
+                        <li><a href="../../README.md">README</a></li>
+                        <li><a href="../../QUICKSTART.md">Quick Start</a></li>
+                        <li><a href="../../ARCHITECTURE.md">Architecture</a></li>
+                        <li><a href="../../DEPLOYMENT.md">Deployment</a></li>
+                        <li><a href="../../SECURITY.md">Security</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Resources</h4>
+                    <ul>
+                        <li><a href="../../docs/handbook/README.md">Handbook (RU)</a></li>
+                        <li><a href="../../examples/">Examples</a></li>
+                        <li><a href="https://github.com/NickScherbakov/proxytorrent" target="_blank">GitHub</a></li>
+                        <li><a href="https://github.com/NickScherbakov/proxytorrent/issues" target="_blank">Issues</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Community</h4>
+                    <ul>
+                        <li><a href="../../CONTRIBUTING.md">Contributing</a></li>
+                        <li><a href="../../LICENSE">License (MIT)</a></li>
+                        <li><a href="https://github.com/NickScherbakov/proxytorrent/discussions" target="_blank">Discussions</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Languages</h4>
+                    <ul>
+                        <li><a href="../en/">English</a></li>
+                        <li><a href="../ru/">Русский</a></li>
+                        <li><a href="../ar/">العربية</a></li>
+                        <li><a href="../zh/">中文</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 ProxyTorrent. Released under the MIT License.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
