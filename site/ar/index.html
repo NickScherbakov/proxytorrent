@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProxyTorrent - جلب آمن للمحتوى وتوزيع P2P</title>
+    <meta name="description" content="ProxyTorrent يجلب المحتوى عبر وكلاء/VPN، يحزمه في تورنت خاص، ويوزعه عبر BitTorrent. مبني على FastAPI و libtorrent.">
+    <meta name="keywords" content="وكيل، تورنت، bittorrent، vpn، fastapi، خصوصية، p2p، توزيع المحتوى">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://nickscherbakov.github.io/proxytorrent/ar/">
+    <meta property="og:title" content="ProxyTorrent - جلب آمن للمحتوى وتوزيع P2P">
+    <meta property="og:description" content="جلب المحتوى عبر وكلاء/VPN وتوزيعه عبر BitTorrent. FastAPI REST API مع libtorrent للمشاركة.">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://nickscherbakov.github.io/proxytorrent/ar/">
+    <meta property="twitter:title" content="ProxyTorrent - جلب آمن للمحتوى وتوزيع P2P">
+    <meta property="twitter:description" content="جلب المحتوى عبر وكلاء/VPN وتوزيعه عبر BitTorrent. FastAPI REST API مع libtorrent للمشاركة.">
+    
+    <link rel="stylesheet" href="../assets/style.css">
+</head>
+<body lang="ar">
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="#" class="logo">
+                    <span class="logo-icon">🌐</span>
+                    <span>ProxyTorrent</span>
+                </a>
+                <nav>
+                    <ul>
+                        <li><a href="#why">لماذا</a></li>
+                        <li><a href="#how">كيف يعمل</a></li>
+                        <li><a href="#features">المميزات</a></li>
+                        <li><a href="#use-cases">حالات الاستخدام</a></li>
+                        <li><a href="#get-started">ابدأ الآن</a></li>
+                        <li><a href="https://github.com/NickScherbakov/proxytorrent" target="_blank">GitHub</a></li>
+                    </ul>
+                </nav>
+                <div class="lang-switcher">
+                    <a href="../en/">EN</a>
+                    <a href="../ru/">RU</a>
+                    <a href="../ar/" class="active">AR</a>
+                    <a href="../zh/">ZH</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="container">
+                <h1>جلب آمن للمحتوى وتوزيع P2P</h1>
+                <p>
+                    ProxyTorrent يجلب المحتوى عبر وكلاء معزولة أو VPN، يحزمه في تورنت خاص،
+                    ويشاركه عبر libtorrent — كل ذلك متاح من خلال واجهة REST نظيفة على FastAPI.
+                </p>
+                <div class="hero-cta">
+                    <a href="#get-started" class="btn btn-primary">ابدأ الآن</a>
+                    <a href="https://github.com/NickScherbakov/proxytorrent" target="_blank" class="btn btn-secondary">عرض على GitHub</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Why Section -->
+        <section id="why">
+            <div class="container">
+                <h2>لماذا ProxyTorrent؟</h2>
+                <div class="grid grid-3">
+                    <div class="card">
+                        <span class="card-icon">🔒</span>
+                        <h3>الخصوصية أولاً</h3>
+                        <p>يتم جلب جميع المحتوى عبر الوكيل أو VPN المكوّن، مما يخفي عنوان IP الحقيقي ويضمن الخصوصية.</p>
+                    </div>
+                    <div class="card">
+                        <span class="card-icon">📦</span>
+                        <h3>توزيع فعال</h3>
+                        <p>يتم تحزيم المحتوى في ملفات BitTorrent خاصة، مما يتيح توزيع P2P فعال مع مشاركة مدمجة.</p>
+                    </div>
+                    <div class="card">
+                        <span class="card-icon">⚡</span>
+                        <h3>واجهة برمجية حديثة</h3>
+                        <p>واجهة REST نظيفة على FastAPI مع معالجة غير متزامنة، مصادقة، تحديد معدل، ومراقبة شاملة.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- How It Works Section -->
+        <section id="how">
+            <div class="container">
+                <h2>كيف يعمل</h2>
+                <div class="steps">
+                    <div class="step">
+                        <h3>الطلب</h3>
+                        <p>يرسل العميل طلب جلب إلى REST API مع عنوان URL المستهدف، الطريقة، الرؤوس، والمصادقة الاختيارية.</p>
+                    </div>
+                    <div class="step">
+                        <h3>الجلب عبر الوكيل</h3>
+                        <p>يجلب العامل في الخلفية المحتوى عبر وكيل SOCKS5/HTTP المكوّن أو VPN، مع التحقق من الحجم ونوع المحتوى.</p>
+                    </div>
+                    <div class="step">
+                        <h3>التحزيم</h3>
+                        <p>يتم تخزين المحتوى باستخدام التجزئة القابلة للعنونة بالمحتوى وتحزيمه في ملف تورنت خاص باستخدام libtorrent.</p>
+                    </div>
+                    <div class="step">
+                        <h3>المشاركة</h3>
+                        <p>يبدأ مشارك BitTorrent المدمج في توزيع المحتوى مع التشفير وحدود الرفع القابلة للتكوين.</p>
+                    </div>
+                    <div class="step">
+                        <h3>التسليم</h3>
+                        <p>يسترجع العميل ملف .torrent أو رابط magnet ويقوم بتنزيل المحتوى عبر بروتوكول BitTorrent.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section id="features">
+            <div class="container">
+                <h2>المميزات</h2>
+                <div class="grid grid-2">
+                    <div class="card">
+                        <h3>🔐 جلب آمن</h3>
+                        <p>جلب المحتوى عبر وكلاء SOCKS5/HTTP قابلة للتكوين أو VPN مع التحقق من SSL وحدود الحجم.</p>
+                    </div>
+                    <div class="card">
+                        <h3>🎯 تورنت خاص</h3>
+                        <p>إنشاء تورنت خاص مع متتبعات مخصصة، تشفير، وإزالة التكرار عبر المحتوى القابل للعنونة.</p>
+                    </div>
+                    <div class="card">
+                        <h3>🔑 المصادقة</h3>
+                        <p>التحقق من توقيع HMAC-SHA256 ودعم Bearer token للوصول الآمن إلى API.</p>
+                    </div>
+                    <div class="card">
+                        <h3>⏱️ تحديد المعدل</h3>
+                        <p>حدود لكل مستخدم ولكل IP لمنع سوء الاستخدام وضمان التوزيع العادل للموارد.</p>
+                    </div>
+                    <div class="card">
+                        <h3>🔄 معالجة غير متزامنة</h3>
+                        <p>قائمة انتظار المهام في الخلفية مع مجموعة عمال لمعالجة الطلبات المتزامنة بكفاءة.</p>
+                    </div>
+                    <div class="card">
+                        <h3>🐳 جاهز للـ Docker</h3>
+                        <p>مُحتوى بالكامل مع docker-compose لسهولة النشر والتكامل مع VPN.</p>
+                    </div>
+                    <div class="card">
+                        <h3>📊 المراقبة</h3>
+                        <p>فحوصات الصحة، سجلات منظمة، وتتبع التقدم لجميع طلبات الجلب.</p>
+                    </div>
+                    <div class="card">
+                        <h3>💾 تخزين ذكي</h3>
+                        <p>تخزين قابل للعنونة بالمحتوى مع تجزئة SHA256 يمنع التكرار ويضمن السلامة.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Use Cases Section -->
+        <section id="use-cases">
+            <div class="container">
+                <h2>حالات الاستخدام</h2>
+                <div class="grid grid-2">
+                    <div class="card">
+                        <span class="card-icon">📡</span>
+                        <h3>توصيل المحتوى الموزع</h3>
+                        <p>جلب المحتوى مرة واحدة عبر الوكيل وتوزيعه بكفاءة إلى عملاء متعددين عبر BitTorrent.</p>
+                    </div>
+                    <div class="card">
+                        <span class="card-icon">🌍</span>
+                        <h3>المحتوى المقيد جغرافياً</h3>
+                        <p>الوصول إلى المحتوى المقفل بالمنطقة عبر الوكلاء مع الحفاظ على الخصوصية والأمان.</p>
+                    </div>
+                    <div class="card">
+                        <span class="card-icon">🔬</span>
+                        <h3>البحث والأرشفة</h3>
+                        <p>جمع وحفظ محتوى الويب مع سلامة قابلة للتحقق وتوزيع فعال.</p>
+                    </div>
+                    <div class="card">
+                        <span class="card-icon">🏢</span>
+                        <h3>التخزين المؤقت للشركات</h3>
+                        <p>حفظ الموارد الخارجية بشكل خاص وتوزيعها داخل شبكتك عبر P2P.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Get Started Section -->
+        <section id="get-started">
+            <div class="container">
+                <h2>ابدأ الآن</h2>
+                
+                <h3>بداية سريعة مع Docker</h3>
+                <pre><code># استنساخ المستودع
+git clone https://github.com/NickScherbakov/proxytorrent.git
+cd proxytorrent
+
+# تشغيل الخدمة
+docker-compose up -d
+
+# فحص الصحة
+curl http://localhost:8000/v1/health</code></pre>
+
+                <h3>إنشاء طلبك الأول</h3>
+                <pre><code># إنشاء طلب جلب
+curl -X POST http://localhost:8000/v1/requests \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "http://example.com",
+    "method": "GET",
+    "ttl": 3600
+  }'
+
+# الحصول على حالة الطلب
+curl http://localhost:8000/v1/requests/{id}
+
+# تنزيل ملف التورنت
+curl http://localhost:8000/v1/requests/{id}/torrent -o file.torrent</code></pre>
+
+                <h3>التكوين</h3>
+                <pre><code># إنشاء ملف .env
+SECURITY__AUTH_ENABLED=true
+SECURITY__HMAC_SECRET=مفتاحك-السري
+
+# إعدادات الوكيل
+PROXY__PROXY_ENABLED=true
+PROXY__PROXY_TYPE=socks5
+PROXY__PROXY_HOST=مضيف-الوكيل
+PROXY__PROXY_PORT=1080
+
+# التخزين
+STORAGE__BASE_PATH=./data</code></pre>
+
+                <div class="grid grid-2" style="margin-top: 2rem;">
+                    <div class="card">
+                        <h3>📚 التوثيق</h3>
+                        <p>
+                            <a href="../../README.md">README</a> • 
+                            <a href="../../QUICKSTART.md">بداية سريعة</a> • 
+                            <a href="../../ARCHITECTURE.md">البنية</a> • 
+                            <a href="../../DEPLOYMENT.md">النشر</a>
+                        </p>
+                        <p style="margin-top: 1rem;">
+                            <a href="../../docs/handbook/README.md">📖 دليل مفصل (RU)</a>
+                        </p>
+                    </div>
+                    <div class="card">
+                        <h3>💻 أمثلة</h3>
+                        <p>
+                            <a href="../../examples/client.py">عميل Python</a> • 
+                            <a href="../../examples/curl_example.sh">سكريبت Bash</a>
+                        </p>
+                        <p style="margin-top: 1rem;">
+                            راجع مجلد <a href="../../examples/">examples/</a> للمزيد.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>التوثيق</h4>
+                    <ul>
+                        <li><a href="../../README.md">README</a></li>
+                        <li><a href="../../QUICKSTART.md">بداية سريعة</a></li>
+                        <li><a href="../../ARCHITECTURE.md">البنية</a></li>
+                        <li><a href="../../DEPLOYMENT.md">النشر</a></li>
+                        <li><a href="../../SECURITY.md">الأمان</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>الموارد</h4>
+                    <ul>
+                        <li><a href="../../docs/handbook/README.md">دليل (RU)</a></li>
+                        <li><a href="../../examples/">أمثلة</a></li>
+                        <li><a href="https://github.com/NickScherbakov/proxytorrent" target="_blank">GitHub</a></li>
+                        <li><a href="https://github.com/NickScherbakov/proxytorrent/issues" target="_blank">Issues</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>المجتمع</h4>
+                    <ul>
+                        <li><a href="../../CONTRIBUTING.md">المساهمة</a></li>
+                        <li><a href="../../LICENSE">الترخيص (MIT)</a></li>
+                        <li><a href="https://github.com/NickScherbakov/proxytorrent/discussions" target="_blank">المناقشات</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>اللغات</h4>
+                    <ul>
+                        <li><a href="../en/">English</a></li>
+                        <li><a href="../ru/">Русский</a></li>
+                        <li><a href="../ar/">العربية</a></li>
+                        <li><a href="../zh/">中文</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 ProxyTorrent. صدر تحت ترخيص MIT.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
