@@ -1,365 +1,490 @@
-# Deployment Guide
+# ProxyTorrent Deployment Guide
 
-This guide covers various deployment scenarios for the ProxyTorrent service.
+This guide provides step-by-step instructions for deploying ProxyTorrent in various environments.
 
 ## Table of Contents
-- [Docker Deployment](#docker-deployment)
-- [Docker Compose Deployment](#docker-compose-deployment)
-- [Systemd Service](#systemd-service)
-- [Kubernetes Deployment](#kubernetes-deployment)
-- [Production Checklist](#production-checklist)
 
-## Docker Deployment
+1. [Quick Start (Docker)](#quick-start-docker)
+2. [Production Deployment](#production-deployment)
+3. [VPS Deployment](#vps-deployment)
+4. [Using with VPN](#using-with-vpn)
+5. [Monitoring and Maintenance](#monitoring-and-maintenance)
 
-### Build the Image
+## Quick Start (Docker)
+
+The fastest way to get ProxyTorrent running:
+
 ```bash
-docker build -t proxytorrent:latest .
-```
+# Clone repository
+git clone https://github.com/NickScherbakov/proxytorrent.git
+cd proxytorrent
 
-### Run the Container
-```bash
-docker run -d \
-  --name proxytorrent \
-  -p 8080:8080 \
-  -e PROXY_HOST=your-proxy.com \
-  -e PROXY_PORT=1080 \
-  -e PROXY_TYPE=socks5 \
-  -v $(pwd)/data/downloads:/data/downloads \
-  -v $(pwd)/data/torrents:/data/torrents \
-  proxytorrent:latest
-```
-
-### View Logs
-```bash
-docker logs -f proxytorrent
-```
-
-## Docker Compose Deployment
-
-### Basic Setup
-```bash
-# 1. Copy environment file
+# Create environment file
 cp .env.example .env
 
-# 2. Edit configuration
-nano .env
-
-# 3. Start service
+# Start service (development mode, no auth)
 docker-compose up -d
 
-# 4. Check status
-docker-compose ps
-
-# 5. View logs
-docker-compose logs -f
-```
-
-### Production Setup with Traefik
-Create `docker-compose.prod.yml`:
-```yaml
-version: '3.8'
-
-services:
-  proxytorrent:
-    build: .
-    environment:
-      - HOST=0.0.0.0
-      - PORT=8080
-    volumes:
-      - ./data:/data
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.proxytorrent.rule=Host(`proxytorrent.example.com`)"
-      - "traefik.http.routers.proxytorrent.tls=true"
-      - "traefik.http.routers.proxytorrent.tls.certresolver=letsencrypt"
-    networks:
-      - traefik
-    restart: unless-stopped
-
-networks:
-  traefik:
-    external: true
-```
-
-Deploy:
-```bash
-docker-compose -f docker-compose.prod.yml up -d
-```
-
-## Systemd Service
-
-### Install Dependencies
-```bash
-# Create virtual environment
-python3 -m venv /opt/proxytorrent/venv
-source /opt/proxytorrent/venv/bin/activate
-pip install -r requirements.txt
-```
-
-### Create Service File
-Create `/etc/systemd/system/proxytorrent.service`:
-```ini
-[Unit]
-Description=ProxyTorrent Service
-After=network.target
-
-[Service]
-Type=simple
-User=proxytorrent
-Group=proxytorrent
-WorkingDirectory=/opt/proxytorrent
-Environment="PATH=/opt/proxytorrent/venv/bin"
-ExecStart=/opt/proxytorrent/venv/bin/python server.py
-Restart=on-failure
-RestartSec=5s
-
-[Install]
-WantedBy=multi-user.target
-```
-
-### Enable and Start
-```bash
-# Create user
-sudo useradd -r -s /bin/false proxytorrent
-
-# Set permissions
-sudo chown -R proxytorrent:proxytorrent /opt/proxytorrent
-
-# Enable service
-sudo systemctl daemon-reload
-sudo systemctl enable proxytorrent
-sudo systemctl start proxytorrent
-
-# Check status
-sudo systemctl status proxytorrent
+# Check health
+curl http://localhost:8000/v1/health
 
 # View logs
-sudo journalctl -u proxytorrent -f
+docker-compose logs -f proxytorrent
 ```
 
-## Kubernetes Deployment
+The service will be available at `http://localhost:8000`.
 
-### ConfigMap
-Create `k8s/configmap.yaml`:
-```yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: proxytorrent-config
-data:
-  HOST: "0.0.0.0"
-  PORT: "8080"
-  SEED_TIME_HOURS: "24"
-```
+## Production Deployment
 
-### Secret
-Create `k8s/secret.yaml`:
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: proxytorrent-secret
-type: Opaque
-stringData:
-  PROXY_HOST: "your-proxy.com"
-  PROXY_PORT: "1080"
-  PROXY_TYPE: "socks5"
-  PROXY_USERNAME: "username"
-  PROXY_PASSWORD: "password"
-```
+### Prerequisites
 
-### Deployment
-Create `k8s/deployment.yaml`:
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: proxytorrent
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: proxytorrent
-  template:
-    metadata:
-      labels:
-        app: proxytorrent
-    spec:
-      containers:
-      - name: proxytorrent
-        image: proxytorrent:latest
-        ports:
-        - containerPort: 8080
-        envFrom:
-        - configMapRef:
-            name: proxytorrent-config
-        - secretRef:
-            name: proxytorrent-secret
-        volumeMounts:
-        - name: data
-          mountPath: /data
-        resources:
-          requests:
-            memory: "256Mi"
-            cpu: "250m"
-          limits:
-            memory: "1Gi"
-            cpu: "1000m"
-      volumes:
-      - name: data
-        persistentVolumeClaim:
-          claimName: proxytorrent-pvc
-```
+- Linux server (Ubuntu 20.04+ recommended)
+- Docker and Docker Compose
+- Domain name (optional, for HTTPS)
+- VPN/Proxy (recommended)
 
-### Service
-Create `k8s/service.yaml`:
-```yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: proxytorrent
-spec:
-  selector:
-    app: proxytorrent
-  ports:
-  - protocol: TCP
-    port: 80
-    targetPort: 8080
-  type: LoadBalancer
-```
+### Step 1: Server Preparation
 
-### PersistentVolumeClaim
-Create `k8s/pvc.yaml`:
-```yaml
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: proxytorrent-pvc
-spec:
-  accessModes:
-  - ReadWriteOnce
-  resources:
-    requests:
-      storage: 100Gi
-```
-
-### Deploy to Kubernetes
 ```bash
-kubectl apply -f k8s/
-kubectl get pods -l app=proxytorrent
-kubectl logs -f deployment/proxytorrent
+# Update system
+sudo apt-get update && sudo apt-get upgrade -y
+
+# Install Docker
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER
+
+# Install Docker Compose
+sudo apt-get install -y docker-compose-plugin
+
+# Reboot to apply changes
+sudo reboot
 ```
 
-## Production Checklist
+### Step 2: Clone and Configure
 
-### Security
-- [ ] Configure firewall rules
-- [ ] Set up SSL/TLS certificates
-- [ ] Implement authentication
-- [ ] Configure rate limiting
-- [ ] Enable security headers
-- [ ] Set up monitoring and alerting
-- [ ] Regular security updates
-- [ ] Audit logs enabled
-
-### Performance
-- [ ] Configure appropriate resource limits
-- [ ] Set up load balancing (if needed)
-- [ ] Configure caching (if applicable)
-- [ ] Optimize disk I/O
-- [ ] Monitor bandwidth usage
-
-### Reliability
-- [ ] Set up automatic backups
-- [ ] Configure health checks
-- [ ] Implement graceful shutdown
-- [ ] Set up log rotation
-- [ ] Configure restart policies
-- [ ] Test disaster recovery
-
-### Monitoring
-- [ ] Application metrics
-- [ ] System metrics (CPU, RAM, Disk)
-- [ ] Network metrics
-- [ ] Error tracking
-- [ ] Performance monitoring
-
-### Recommended Tools
-- **Reverse Proxy**: nginx, Traefik, Caddy
-- **Monitoring**: Prometheus + Grafana
-- **Logging**: ELK Stack, Loki
-- **Alerting**: AlertManager, PagerDuty
-- **Backup**: Restic, Velero (K8s)
-
-## Environment-Specific Notes
-
-### Development
 ```bash
-# Run without Docker
-python3 server.py
+# Clone repository
+git clone https://github.com/NickScherbakov/proxytorrent.git
+cd proxytorrent
 
-# Run with auto-reload (requires watchdog)
-pip install watchdog
-watchmedo auto-restart --patterns="*.py" --recursive python3 server.py
+# Create production environment file
+cat > .env << EOF
+# Security (IMPORTANT: Change these!)
+SECURITY__AUTH_ENABLED=true
+SECURITY__HMAC_SECRET=$(openssl rand -hex 32)
+
+# Generate bearer tokens (optional)
+# SECURITY__BEARER_TOKENS=token1,token2
+
+# Proxy configuration
+PROXY__PROXY_ENABLED=true
+PROXY__PROXY_TYPE=socks5
+PROXY__PROXY_HOST=your-vpn-host
+PROXY__PROXY_PORT=1080
+
+# Storage
+STORAGE__BASE_PATH=/app/data
+
+# Database (use PostgreSQL for production)
+DATABASE__DATABASE_URL=postgresql+asyncpg://user:password@postgres:5432/proxytorrent
+
+# Monitoring
+MONITORING__LOG_LEVEL=INFO
+
+# Other settings
+DEBUG=false
+EOF
+
+# Set secure permissions
+chmod 600 .env
 ```
 
-### Staging
-- Use separate proxy configuration
-- Reduced seed times for testing
-- Limited storage quotas
-- Full logging enabled
+### Step 3: Configure PostgreSQL (Optional but Recommended)
 
-### Production
-- Production-grade proxy/VPN
-- Appropriate seed times (24+ hours)
-- Sufficient storage capacity
-- Structured logging (JSON)
-- Health checks every 30s
-- Automatic restarts on failure
+Edit `docker-compose.yml` and uncomment the PostgreSQL service:
+
+```yaml
+postgres:
+  image: postgres:15-alpine
+  container_name: proxytorrent-db
+  environment:
+    - POSTGRES_USER=proxytorrent
+    - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme}
+    - POSTGRES_DB=proxytorrent
+  volumes:
+    - postgres_data:/var/lib/postgresql/data
+  restart: unless-stopped
+```
+
+### Step 4: Start Services
+
+```bash
+# Start in background
+docker-compose up -d
+
+# Check status
+docker-compose ps
+
+# View logs
+docker-compose logs -f proxytorrent
+
+# Check health
+curl http://localhost:8000/v1/health
+```
+
+### Step 5: Configure Reverse Proxy (Nginx)
+
+Install Nginx:
+```bash
+sudo apt-get install -y nginx certbot python3-certbot-nginx
+```
+
+Create Nginx configuration:
+```bash
+sudo nano /etc/nginx/sites-available/proxytorrent
+```
+
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    # Rate limiting
+    limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
+
+    location / {
+        limit_req zone=api burst=20 nodelay;
+        
+        proxy_pass http://localhost:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # Timeouts
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 120s;
+        
+        # Buffer settings
+        proxy_buffering on;
+        proxy_buffer_size 4k;
+        proxy_buffers 8 4k;
+    }
+}
+```
+
+Enable configuration:
+```bash
+sudo ln -s /etc/nginx/sites-available/proxytorrent /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
+```
+
+### Step 6: Enable HTTPS with Let's Encrypt
+
+```bash
+sudo certbot --nginx -d your-domain.com
+```
+
+Follow the prompts to set up automatic HTTPS.
+
+## VPS Deployment
+
+### Using DigitalOcean
+
+1. **Create Droplet**
+   - Choose Ubuntu 22.04 LTS
+   - Minimum: 2GB RAM, 1 vCPU, 50GB SSD
+   - Recommended: 4GB RAM, 2 vCPU, 80GB SSD
+
+2. **Initial Setup**
+```bash
+# SSH into droplet
+ssh root@your-server-ip
+
+# Create non-root user
+adduser proxytorrent
+usermod -aG sudo proxytorrent
+su - proxytorrent
+```
+
+3. **Follow Production Deployment steps above**
+
+### Using AWS EC2
+
+1. **Launch Instance**
+   - AMI: Ubuntu Server 22.04 LTS
+   - Instance type: t3.medium or larger
+   - Storage: 50GB+ gp3
+
+2. **Security Group Rules**
+   - SSH (22): Your IP
+   - HTTP (80): 0.0.0.0/0
+   - HTTPS (443): 0.0.0.0/0
+
+3. **Connect and Deploy**
+```bash
+ssh -i your-key.pem ubuntu@ec2-instance-public-ip
+# Follow Production Deployment steps
+```
+
+## Using with VPN
+
+### Option 1: System VPN
+
+Configure your server to use a VPN connection, then set proxy settings:
+
+```bash
+# In .env
+PROXY__PROXY_ENABLED=true
+PROXY__PROXY_TYPE=socks5
+PROXY__PROXY_HOST=localhost
+PROXY__PROXY_PORT=1080
+```
+
+### Option 2: OpenVPN Container
+
+1. **Prepare OpenVPN Config**
+```bash
+mkdir -p vpn
+# Copy your .ovpn file to vpn/config.ovpn
+```
+
+2. **Update docker-compose.yml**
+
+Uncomment VPN service and configure proxytorrent to use it:
+
+```yaml
+vpn:
+  image: dperson/openvpn-client
+  container_name: proxytorrent-vpn
+  cap_add:
+    - NET_ADMIN
+  devices:
+    - /dev/net/tun
+  volumes:
+    - ./vpn:/vpn:ro
+  environment:
+    - VPNCONF=config.ovpn
+  restart: unless-stopped
+
+proxytorrent:
+  # ... other config ...
+  network_mode: "service:vpn"  # Route through VPN
+  depends_on:
+    - vpn
+```
+
+3. **Start Services**
+```bash
+docker-compose up -d
+
+# Verify VPN connection
+docker-compose exec vpn curl -s https://ifconfig.me
+```
+
+### Option 3: External SOCKS5 Proxy
+
+Use a separate proxy server:
+
+```bash
+# In .env
+PROXY__PROXY_ENABLED=true
+PROXY__PROXY_TYPE=socks5
+PROXY__PROXY_HOST=proxy.example.com
+PROXY__PROXY_PORT=1080
+PROXY__PROXY_USERNAME=your-username
+PROXY__PROXY_PASSWORD=your-password
+```
+
+## Monitoring and Maintenance
+
+### Health Checks
+
+```bash
+# Check service health
+curl http://localhost:8000/v1/health
+
+# Monitor with watch
+watch -n 5 'curl -s http://localhost:8000/v1/health | jq'
+```
+
+### Logs
+
+```bash
+# View all logs
+docker-compose logs -f
+
+# View specific service
+docker-compose logs -f proxytorrent
+
+# Last 100 lines
+docker-compose logs --tail=100 proxytorrent
+
+# Filter by level
+docker-compose logs proxytorrent | grep ERROR
+```
+
+### Backups
+
+```bash
+# Backup data directory
+tar -czf backup-$(date +%Y%m%d).tar.gz data/
+
+# Backup database (if using PostgreSQL)
+docker-compose exec postgres pg_dump -U proxytorrent proxytorrent > backup.sql
+```
+
+### Updates
+
+```bash
+# Pull latest code
+cd proxytorrent
+git pull
+
+# Rebuild and restart
+docker-compose down
+docker-compose build --no-cache
+docker-compose up -d
+
+# Verify
+curl http://localhost:8000/v1/health
+```
+
+### Resource Monitoring
+
+```bash
+# Container resource usage
+docker stats proxytorrent
+
+# Disk usage
+df -h
+du -sh data/
+
+# Clean old data (if needed)
+docker-compose exec proxytorrent find /app/data -type f -mtime +30 -delete
+```
 
 ## Troubleshooting
 
-### Port Already in Use
-```bash
-# Find process using port 8080
-sudo lsof -i :8080
-# or
-sudo netstat -tlnp | grep 8080
+### Container Won't Start
 
-# Kill the process
-sudo kill -9 <PID>
+```bash
+# Check logs
+docker-compose logs proxytorrent
+
+# Verify configuration
+docker-compose config
+
+# Check permissions
+ls -la data/
 ```
 
-### Permission Denied
+### Connection Issues
+
 ```bash
-# Fix directory permissions
-sudo chown -R $USER:$USER /tmp/proxytorrent
-chmod 755 /tmp/proxytorrent
+# Test from inside container
+docker-compose exec proxytorrent curl -I http://example.com
+
+# Verify proxy
+docker-compose exec proxytorrent env | grep PROXY
+
+# Check network
+docker network ls
+docker network inspect proxytorrent_default
 ```
 
-### Out of Disk Space
-```bash
-# Check disk usage
-df -h
+### High Memory Usage
 
-# Clean old torrents manually
-find /tmp/proxytorrent/downloads -mtime +7 -delete
-find /tmp/proxytorrent/torrents -mtime +7 -delete
+```bash
+# Adjust worker count in docker-compose.yml
+environment:
+  - TASK_QUEUE_WORKERS=2  # Reduce workers
+
+# Restart service
+docker-compose restart proxytorrent
 ```
 
-### Proxy Connection Issues
-```bash
-# Test proxy connectivity
-curl --socks5 proxy-host:1080 https://api.ipify.org
+### Database Issues
 
-# Check proxy credentials
-# Verify PROXY_HOST, PROXY_PORT, PROXY_USERNAME, PROXY_PASSWORD in .env
+```bash
+# Check database connection
+docker-compose exec proxytorrent python -c "from app.core.database import engine; import asyncio; asyncio.run(engine.connect())"
+
+# Reset database (WARNING: Deletes all data)
+docker-compose down
+rm -rf data/proxytorrent.db
+docker-compose up -d
+```
+
+## Security Hardening
+
+1. **Enable Firewall**
+```bash
+sudo ufw enable
+sudo ufw allow 22/tcp
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+```
+
+2. **Fail2ban Protection**
+```bash
+sudo apt-get install -y fail2ban
+sudo systemctl enable fail2ban
+```
+
+3. **Regular Updates**
+```bash
+# System updates
+sudo apt-get update && sudo apt-get upgrade -y
+
+# Docker image updates
+docker-compose pull
+docker-compose up -d
+```
+
+4. **Rotate Secrets**
+```bash
+# Generate new HMAC secret
+openssl rand -hex 32
+
+# Update .env
+nano .env
+
+# Restart service
+docker-compose restart proxytorrent
+```
+
+## Performance Tuning
+
+### For High Volume
+
+```yaml
+# In docker-compose.yml
+proxytorrent:
+  environment:
+    # Increase workers
+    - TASK_QUEUE_WORKERS=10
+    
+    # Adjust rate limits
+    - RATE_LIMIT__REQUESTS_PER_MINUTE=120
+    - RATE_LIMIT__REQUESTS_PER_HOUR=5000
+    
+    # Increase connection limits
+    - TORRENT__MAX_CONNECTIONS=500
+    
+  # Add resource limits
+  deploy:
+    resources:
+      limits:
+        cpus: '2'
+        memory: 4G
 ```
 
 ## Support
 
 For issues or questions:
-1. Check the logs first
-2. Review SECURITY.md for security concerns
-3. Open an issue on GitHub
-4. Include relevant logs and configuration (remove sensitive data)
+- GitHub Issues: https://github.com/NickScherbakov/proxytorrent/issues
+- Documentation: See README.md
+- Security: See SECURITY.md

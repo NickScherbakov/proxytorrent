@@ -1,18 +1,45 @@
 # ProxyTorrent
 
-A combined Proxy + BitTorrent service that fetches content through an isolated proxy/VPN, packages it into a torrent, and seeds it for requesting clients.
+A combined Proxy + BitTorrent service that fetches content through an isolated proxy/VPN, packages it into torrents, and seeds it for requesting clients.
 
 ## Features
 
-- **Proxy/VPN Support**: Fetch content through SOCKS5/HTTP proxies for privacy and isolation
-- **Automatic Torrent Creation**: Downloaded content is automatically packaged into .torrent files
-- **Built-in Seeding**: Torrents are automatically seeded for a configurable duration
-- **RESTful API**: Simple HTTP API for requesting content and monitoring status
-- **Docker Support**: Easy deployment with Docker and Docker Compose
+- **Secure Fetching**: Fetch content through configurable SOCKS5/HTTP proxies or VPN
+- **Torrent Packaging**: Automatically create private torrents from fetched content
+- **Content Seeding**: Built-in BitTorrent seeder using libtorrent
+- **Authentication**: HMAC-SHA256 or Bearer token authentication
+- **Rate Limiting**: Per-user and per-IP rate limits
+- **Content Deduplication**: Content-addressable storage with SHA256 hashing
+- **Async Processing**: Background task queue for efficient request handling
+- **Docker Support**: Fully containerized with docker-compose
+
+## Architecture
+
+### Components
+
+1. **API (FastAPI)**: REST endpoints for request management
+2. **Task Queue**: Async worker pool for processing fetch requests
+3. **Fetcher**: HTTP client with proxy support and security validation
+4. **Packager**: Torrent creation and content storage
+5. **Seeder**: BitTorrent session for distributing content
+6. **Storage**: Content-addressable filesystem storage
+
+### Flow
+
+```
+Client → POST /v1/requests → Queue → Fetcher (via Proxy) → Packager → Seeder → Ready
+                                                                                  ↓
+Client ← GET /v1/requests/{id}/torrent ←──────────────────────────────────────────┘
+```
 
 ## Quick Start
 
-### Using Docker Compose (Recommended)
+### Prerequisites
+
+- Docker and Docker Compose
+- Python 3.11+ (for local development)
+
+### Using Docker (Recommended)
 
 1. Clone the repository:
 ```bash
@@ -20,10 +47,22 @@ git clone https://github.com/NickScherbakov/proxytorrent.git
 cd proxytorrent
 ```
 
-2. Configure environment variables (optional):
+2. Create environment file (optional):
 ```bash
-cp .env.example .env
-# Edit .env with your proxy settings
+cat > .env << EOF
+# Security
+HMAC_SECRET=your-secret-key-here
+SECURITY__AUTH_ENABLED=false
+
+# Proxy (optional)
+PROXY_ENABLED=false
+PROXY_TYPE=socks5
+PROXY_HOST=your-proxy-host
+PROXY_PORT=1080
+
+# Logging
+LOG_LEVEL=INFO
+EOF
 ```
 
 3. Start the service:
@@ -31,152 +70,375 @@ cp .env.example .env
 docker-compose up -d
 ```
 
-### Manual Installation
+4. Check health:
+```bash
+curl http://localhost:8000/v1/health
+```
+
+### Local Development
 
 1. Install dependencies:
 ```bash
 pip install -r requirements.txt
+pip install -r requirements-dev.txt
 ```
 
-2. Configure environment:
+2. Run the service:
 ```bash
-cp .env.example .env
-# Edit .env as needed
-```
-
-3. Run the server:
-```bash
-python server.py
+cd src
+uvicorn app.main:app --reload
 ```
 
 ## API Usage
 
-### Fetch and Create Torrent
+### Authentication
 
-Request content to be fetched, packaged as a torrent, and seeded:
+The service supports two authentication methods:
 
+#### 1. HMAC Signature (Recommended)
 ```bash
-curl -X POST http://localhost:8080/fetch \
+# Compute signature
+BODY='{"url":"http://example.com","method":"GET","ttl":3600}'
+SIGNATURE=$(echo -n "$BODY" | openssl dgst -sha256 -hmac "your-secret-key" | cut -d' ' -f2)
+
+# Make request
+curl -X POST http://localhost:8000/v1/requests \
   -H "Content-Type: application/json" \
-  -d '{
-    "url": "https://example.com/file.zip",
-    "filename": "myfile.zip",
-    "trackers": [
-      "udp://tracker.opentrackr.org:1337/announce",
-      "udp://open.demonii.com:1337/announce"
-    ]
-  }'
+  -H "X-Signature: $SIGNATURE" \
+  -d "$BODY"
 ```
 
-Response:
+#### 2. Bearer Token
+```bash
+curl -X POST http://localhost:8000/v1/requests \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-token-here" \
+  -d '{"url":"http://example.com","method":"GET","ttl":3600}'
+```
+
+### API Endpoints
+
+#### Create Fetch Request
+```bash
+POST /v1/requests
+```
+
+**Request:**
 ```json
 {
-  "success": true,
-  "info_hash": "abc123def456...",
-  "torrent_file": "/torrents/myfile_abc123de.torrent",
-  "message": "Content fetched and seeding started"
+  "url": "http://example.com",
+  "method": "GET",
+  "headers": {
+    "User-Agent": "Custom-Agent"
+  },
+  "body": null,
+  "ttl": 3600
 }
 ```
 
-### Check Torrent Status
-
-```bash
-curl http://localhost:8080/status/{info_hash}
-```
-
-Response:
+**Response:**
 ```json
 {
-  "info_hash": "abc123def456...",
-  "state": "seeding",
-  "progress": 1.0,
-  "upload_rate": 102400,
-  "download_rate": 0,
-  "num_peers": 3,
-  "num_seeds": 1,
-  "total_upload": 1048576,
-  "total_download": 0
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "queued",
+  "estimated_ready": 60,
+  "created_at": "2025-10-20T19:00:00Z"
 }
 ```
 
-### Download Torrent File
-
+#### Get Request Status
 ```bash
-curl -O http://localhost:8080/torrents/{filename}.torrent
+GET /v1/requests/{id}
 ```
 
-### Health Check
+**Response:**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "ready",
+  "url": "http://example.com",
+  "method": "GET",
+  "created_at": "2025-10-20T19:00:00Z",
+  "updated_at": "2025-10-20T19:01:00Z",
+  "completed_at": "2025-10-20T19:01:00Z",
+  "infohash": "abcdef1234567890abcdef1234567890abcdef12",
+  "content_hash": "sha256hash...",
+  "content_size": 1024,
+  "content_type": "text/html",
+  "progress": 100
+}
+```
 
+#### Download Torrent File
 ```bash
-curl http://localhost:8080/health
+GET /v1/requests/{id}/torrent
+```
+
+Downloads the `.torrent` file for completed requests.
+
+#### Get Magnet Link
+```bash
+GET /v1/requests/{id}/magnet
+```
+
+**Response:**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "magnet_link": "magnet:?xt=urn:btih:abcdef1234567890abcdef1234567890abcdef12",
+  "infohash": "abcdef1234567890abcdef1234567890abcdef12"
+}
+```
+
+#### Cancel Request
+```bash
+DELETE /v1/requests/{id}
+```
+
+Cancels a pending request or marks it as cancelled.
+
+#### Health Check
+```bash
+GET /v1/health
+```
+
+**Response:**
+```json
+{
+  "status": "healthy",
+  "version": "0.1.0",
+  "uptime": 3600.0,
+  "checks": {
+    "database": {"status": "healthy"},
+    "storage": {"status": "healthy"},
+    "task_queue": {"status": "healthy", "queue_size": 0}
+  }
+}
 ```
 
 ## Configuration
 
-Configuration is done via environment variables. See `.env.example` for all options:
+Configuration is managed through environment variables or a `.env` file.
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `HOST` | Server bind address | `0.0.0.0` |
-| `PORT` | Server port | `8080` |
-| `PROXY_HOST` | Proxy server hostname | (none) |
-| `PROXY_PORT` | Proxy server port | (none) |
-| `PROXY_TYPE` | Proxy type (socks5/http) | `socks5` |
-| `PROXY_USERNAME` | Proxy authentication username | (none) |
-| `PROXY_PASSWORD` | Proxy authentication password | (none) |
-| `DOWNLOAD_DIR` | Directory for downloaded files | `/tmp/proxytorrent/downloads` |
-| `TORRENT_DIR` | Directory for .torrent files | `/tmp/proxytorrent/torrents` |
-| `SEED_TIME_HOURS` | Hours to seed each torrent | `24` |
-| `MAX_UPLOAD_RATE_KB` | Max upload rate in KB/s (0=unlimited) | `0` |
-| `MAX_DOWNLOAD_RATE_KB` | Max download rate in KB/s (0=unlimited) | `0` |
+### Security Settings
 
-## Architecture
+- `SECURITY__AUTH_ENABLED`: Enable authentication (default: true)
+- `SECURITY__HMAC_SECRET`: HMAC secret for request signing
+- `SECURITY__BEARER_TOKENS`: Comma-separated list of valid bearer tokens
 
-The service consists of three main components:
+### Proxy Settings
 
-1. **Fetcher (`fetcher.py`)**: Handles downloading content through the configured proxy
-2. **Torrent Manager (`torrent_manager.py`)**: Creates torrents and manages seeding using libtorrent
-3. **API Server (`server.py`)**: Provides RESTful API endpoints and coordinates the workflow
+- `PROXY__PROXY_ENABLED`: Enforce proxy usage (default: true)
+- `PROXY__PROXY_TYPE`: Proxy type (http, https, socks5)
+- `PROXY__PROXY_HOST`: Proxy host
+- `PROXY__PROXY_PORT`: Proxy port
+- `PROXY__PROXY_USERNAME`: Proxy username (optional)
+- `PROXY__PROXY_PASSWORD`: Proxy password (optional)
 
-### Workflow
+### Fetcher Settings
 
-1. Client sends a POST request to `/fetch` with a URL
-2. Service downloads the content through the configured proxy/VPN
-3. Service creates a .torrent file from the downloaded content
-4. Service starts seeding the torrent via DHT and optional trackers
-5. Client receives the torrent info hash and can download the .torrent file
-6. Torrent is automatically unseeded after the configured seed time
+- `FETCHER__CONNECT_TIMEOUT`: Connection timeout in seconds (default: 10)
+- `FETCHER__READ_TIMEOUT`: Read timeout in seconds (default: 30)
+- `FETCHER__MAX_SIZE`: Maximum response size in bytes (default: 52428800)
+- `FETCHER__MIME_WHITELIST`: Allowed MIME types (JSON array)
+- `FETCHER__VERIFY_SSL`: Verify SSL certificates (default: true)
 
-## Use Cases
+### Torrent Settings
 
-- **Privacy-focused content distribution**: Fetch sensitive content through VPN and distribute via torrent
-- **Content mirroring**: Create torrents from web resources for distributed access
-- **Bandwidth saving**: Single fetch + multiple torrent downloads reduces origin server load
-- **Geo-restricted content**: Use proxy to access region-locked content and redistribute
+- `TORRENT__PRIVATE_TRACKER`: Create private torrents (default: true)
+- `TORRENT__PIECE_SIZE`: Torrent piece size in bytes (default: 262144)
+- `TORRENT__ANNOUNCE_URL`: Tracker announce URL (optional)
+- `TORRENT__ENCRYPTION_ENABLED`: Enable torrent encryption (default: true)
+- `TORRENT__UPLOAD_RATE_LIMIT`: Upload rate limit in bytes/sec (default: 0=unlimited)
 
-## Security Considerations
+### Storage Settings
 
-- Always use this service in compliance with applicable laws and terms of service
-- Configure proper proxy/VPN to ensure privacy during content fetching
-- Consider implementing authentication for the API in production environments
-- Be mindful of copyright and licensing when distributing content
+- `STORAGE__BASE_PATH`: Base storage path (default: ./data)
+- `STORAGE__CONTENT_PATH`: Content storage path
+- `STORAGE__TORRENT_PATH`: Torrent file storage path
+- `STORAGE__RESUME_PATH`: Resume data storage path
+
+### Rate Limiting
+
+- `RATE_LIMIT__RATE_LIMIT_ENABLED`: Enable rate limiting (default: true)
+- `RATE_LIMIT__REQUESTS_PER_MINUTE`: Max requests per minute per user (default: 60)
+- `RATE_LIMIT__REQUESTS_PER_HOUR`: Max requests per hour per user (default: 1000)
+- `RATE_LIMIT__REQUESTS_PER_IP_MINUTE`: Max requests per minute per IP (default: 100)
+
+## Deployment
+
+### VPS Deployment
+
+1. **Prepare Server**:
+```bash
+# Update system
+apt-get update && apt-get upgrade -y
+
+# Install Docker
+curl -fsSL https://get.docker.com | sh
+
+# Install Docker Compose
+apt-get install docker-compose-plugin
+```
+
+2. **Clone and Configure**:
+```bash
+git clone https://github.com/NickScherbakov/proxytorrent.git
+cd proxytorrent
+
+# Create production .env
+cp .env.example .env
+nano .env  # Edit configuration
+```
+
+3. **Start Service**:
+```bash
+docker-compose up -d
+```
+
+4. **Configure Reverse Proxy (Nginx)**:
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    location / {
+        proxy_pass http://localhost:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+```
+
+### Using with VPN/Proxy
+
+#### Option 1: System Proxy
+Configure proxy settings in `.env`:
+```bash
+PROXY__PROXY_ENABLED=true
+PROXY__PROXY_TYPE=socks5
+PROXY__PROXY_HOST=vpn-gateway
+PROXY__PROXY_PORT=1080
+```
+
+#### Option 2: OpenVPN Container
+Uncomment the VPN service in `docker-compose.yml` and mount your VPN config:
+```yaml
+vpn:
+  image: dperson/openvpn-client
+  cap_add:
+    - NET_ADMIN
+  devices:
+    - /dev/net/tun
+  volumes:
+    - ./vpn:/vpn:ro
+  restart: unless-stopped
+
+proxytorrent:
+  network_mode: "service:vpn"  # Route through VPN
+```
 
 ## Development
 
-Run tests (when implemented):
+### Running Tests
 ```bash
-pytest
+# Install dev dependencies
+pip install -r requirements-dev.txt
+
+# Run tests
+pytest src/app/tests/ -v
+
+# Run with coverage
+pytest src/app/tests/ -v --cov=app --cov-report=html
 ```
 
-Lint code:
+### Linting
 ```bash
-pylint *.py
+# Run ruff
+ruff check src/
+
+# Run mypy
+mypy src/
 ```
+
+### Code Formatting
+```bash
+# Format with black
+black src/
+
+# Sort imports
+isort src/
+```
+
+## Security Considerations
+
+1. **Always enable authentication in production**: Set `SECURITY__AUTH_ENABLED=true`
+2. **Use strong HMAC secrets**: Generate with `openssl rand -hex 32`
+3. **Enable SSL/TLS**: Use a reverse proxy with HTTPS
+4. **Enforce proxy usage**: Set `PROXY__PROXY_ENABLED=true` to ensure all requests go through proxy
+5. **Limit MIME types**: Configure `FETCHER__MIME_WHITELIST` to only allow required content types
+6. **Set rate limits**: Adjust rate limiting settings based on your use case
+7. **Private torrents**: Keep `TORRENT__PRIVATE_TRACKER=true` for security
+8. **SSL verification**: Keep `FETCHER__VERIFY_SSL=true` to prevent MITM attacks
+
+## Monitoring
+
+### Logs
+```bash
+# View logs
+docker-compose logs -f proxytorrent
+
+# View specific component logs
+docker-compose logs -f proxytorrent | grep "Fetcher"
+```
+
+### Metrics
+Prometheus metrics are available at `/metrics` (if enabled).
+
+### Health Checks
+Regular health checks ensure service availability:
+```bash
+curl http://localhost:8000/v1/health
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Libtorrent import errors**:
+   - Ensure libtorrent is properly installed
+   - Check Python version compatibility (3.11+)
+
+2. **Proxy connection failures**:
+   - Verify proxy credentials
+   - Check network connectivity to proxy
+   - Review proxy logs
+
+3. **Database errors**:
+   - Check database file permissions
+   - Ensure data directory exists and is writable
+
+4. **Torrent creation failures**:
+   - Verify storage paths are writable
+   - Check disk space availability
 
 ## License
 
-See LICENSE file for details.
+MIT License - see LICENSE file for details.
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch
+3. Add tests for new functionality
+4. Ensure all tests pass
+5. Submit a pull request
+
+## Support
+
+For issues and questions:
+- GitHub Issues: https://github.com/NickScherbakov/proxytorrent/issues
+- Documentation: See docs/ directory

@@ -1,117 +1,213 @@
 # Security Policy
 
-## Implemented Security Measures
+## Supported Versions
 
-### Path Traversal Protection
-The `/torrents/{filename}` endpoint implements multiple layers of protection:
-- **Filename Validation**: Strict regex pattern `^[a-zA-Z0-9._-]+\.torrent$` prevents directory traversal
-- **Path Resolution**: Uses `Path.resolve()` and `relative_to()` to ensure paths stay within `TORRENT_DIR`
-- **File Existence Check**: Verifies file exists before serving
-
-### Dependency Security
-All dependencies are checked against the GitHub Advisory Database:
-- **aiohttp**: Updated to 3.9.4 (fixes CVE-2024-23334 and CVE-2024-23829)
-- All other dependencies: No known vulnerabilities
-
-### Network Security
-- **Proxy Support**: Content fetching can be isolated through SOCKS5/HTTP proxies
-- **Request Validation**: All API endpoints validate input parameters
-- **Timeout Protection**: HTTP requests have 300-second timeout to prevent hanging
-
-### Recommended Production Hardening
-
-1. **Authentication**: Implement API authentication (JWT, API keys, or OAuth)
-   ```python
-   # Add to server.py
-   @web.middleware
-   async def auth_middleware(request, handler):
-       token = request.headers.get('Authorization')
-       if not verify_token(token):
-           return web.Response(status=401)
-       return await handler(request)
-   ```
-
-2. **Rate Limiting**: Add rate limiting to prevent abuse
-   ```python
-   # Consider using aiohttp-ratelimit
-   from aiohttp_ratelimit import RateLimiter
-   ```
-
-3. **HTTPS**: Deploy behind a reverse proxy with TLS
-   ```yaml
-   # nginx example
-   server {
-       listen 443 ssl;
-       ssl_certificate /path/to/cert.pem;
-       ssl_certificate_key /path/to/key.pem;
-       location / {
-           proxy_pass http://localhost:8080;
-       }
-   }
-   ```
-
-4. **Input Sanitization**: Additional URL validation
-   ```python
-   # Add to fetcher.py
-   def validate_url(url):
-       parsed = urlparse(url)
-       if parsed.scheme not in ['http', 'https']:
-           raise ValueError("Only HTTP/HTTPS URLs allowed")
-       if parsed.hostname in ['localhost', '127.0.0.1', '::1']:
-           raise ValueError("Local URLs not allowed")
-   ```
-
-5. **Disk Quota**: Implement disk space monitoring and limits
-   ```python
-   # Add to config.py
-   MAX_DOWNLOAD_SIZE_MB = 1000
-   MAX_STORAGE_SIZE_GB = 100
-   ```
-
-## Known Limitations
-
-### CodeQL Alerts
-The following CodeQL alerts are **false positives**:
-- `py/path-injection` in `server.py` lines 127, 136, 142
-  - **Status**: Mitigated
-  - **Reason**: Filename is validated with strict regex and path resolution before use
-  - **Evidence**: Regex `^[a-zA-Z0-9._-]+\.torrent$` + `relative_to()` check prevents traversal
+| Version | Supported          |
+| ------- | ------------------ |
+| 0.1.x   | :white_check_mark: |
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability, please:
-1. **Do NOT** open a public issue
-2. Email the maintainer with details
-3. Allow 90 days for a fix before public disclosure
+**Please do not report security vulnerabilities through public GitHub issues.**
 
-## Legal Considerations
+Instead, please report them via:
+- Email: [maintainer email]
+- GitHub Security Advisory (preferred): Use the "Security" tab
 
-**IMPORTANT**: Users are responsible for:
-- Complying with copyright laws
-- Respecting terms of service of fetched content
-- Following applicable laws in their jurisdiction
-- Not using this service for illegal activities
+### What to Include
 
-The service should only be used for:
-- Legal content distribution
-- Personal backups
-- Open-source software mirroring
-- Content you own or have permission to distribute
+When reporting a vulnerability, please include:
 
-## Security Best Practices for Users
+1. **Description**: Clear description of the vulnerability
+2. **Impact**: Potential impact if exploited
+3. **Reproduction**: Steps to reproduce the issue
+4. **Environment**: Version, OS, configuration details
+5. **Suggested Fix**: If you have ideas for remediation
 
-1. **Use VPN/Proxy**: Always configure proxy settings for privacy
-2. **Validate Content**: Only fetch from trusted sources
-3. **Monitor Resources**: Track disk usage and bandwidth
-4. **Update Regularly**: Keep dependencies updated
-5. **Audit Logs**: Review access logs regularly
-6. **Network Isolation**: Run in isolated network environment
-7. **Access Control**: Restrict API access to trusted clients only
+### Response Timeline
 
-## Compliance
+- **Acknowledgment**: Within 48 hours
+- **Initial Assessment**: Within 1 week
+- **Fix Timeline**: Varies by severity (critical: ASAP, high: 2 weeks, medium: 1 month)
+- **Disclosure**: After fix is released and users have time to update
 
-This service should be deployed in compliance with:
-- DMCA (Digital Millennium Copyright Act)
-- GDPR (if handling user data)
-- Local copyright and distribution laws
-- Service provider terms of service
+## Security Best Practices
+
+### Deployment Security
+
+1. **Always Enable Authentication**
+```bash
+SECURITY__AUTH_ENABLED=true
+SECURITY__HMAC_SECRET=<strong-random-secret>
+```
+
+2. **Use HTTPS**
+- Deploy behind reverse proxy with SSL/TLS
+- Use valid certificates (Let's Encrypt)
+- Redirect HTTP to HTTPS
+
+3. **Enforce Proxy Usage**
+```bash
+PROXY__PROXY_ENABLED=true
+PROXY__PROXY_HOST=your-vpn-host
+```
+
+4. **Restrict MIME Types**
+```bash
+FETCHER__MIME_WHITELIST=["text/html","application/json"]
+```
+
+5. **Enable SSL Verification**
+```bash
+FETCHER__VERIFY_SSL=true
+```
+
+6. **Set Private Torrents**
+```bash
+TORRENT__PRIVATE_TRACKER=true
+TORRENT__ENCRYPTION_ENABLED=true
+```
+
+7. **Configure Rate Limits**
+```bash
+RATE_LIMIT__RATE_LIMIT_ENABLED=true
+RATE_LIMIT__REQUESTS_PER_MINUTE=60
+```
+
+### Network Security
+
+1. **Firewall Configuration**
+```bash
+# Only expose necessary ports
+ufw allow 80/tcp
+ufw allow 443/tcp
+ufw deny 8000/tcp  # Don't expose app port directly
+```
+
+2. **Use VPN/Proxy**
+- Route all fetch requests through VPN
+- Use SOCKS5 proxy with authentication
+- Verify VPN kill switch is active
+
+3. **Network Isolation**
+- Use Docker networks
+- Separate data plane from control plane
+- Limit container network access
+
+### Data Security
+
+1. **Protect Secrets**
+```bash
+# Never commit .env files
+# Use secret management (Vault, AWS Secrets Manager)
+# Rotate secrets regularly
+```
+
+2. **File Permissions**
+```bash
+# Restrict data directory access
+chmod 700 data/
+chown -R app:app data/
+```
+
+3. **Database Security**
+- Use PostgreSQL with authentication in production
+- Enable SSL for database connections
+- Regular backups with encryption
+
+### Application Security
+
+1. **Input Validation**
+- All URLs are validated
+- Request bodies are size-limited
+- Headers are sanitized
+
+2. **Output Encoding**
+- Sensitive data masked in logs
+- No PII in error messages
+- Safe error handling
+
+3. **Authentication**
+- HMAC-SHA256 for request signing
+- Bearer tokens with sufficient entropy
+- Token rotation support
+
+4. **Rate Limiting**
+- Per-user limits
+- Per-IP limits
+- Prevents DoS attacks
+
+### Monitoring
+
+1. **Log Security Events**
+```bash
+MONITORING__LOG_LEVEL=INFO
+MONITORING__MASK_SENSITIVE=true
+```
+
+2. **Watch for Anomalies**
+- Unusual request patterns
+- High error rates
+- Failed authentication attempts
+
+3. **Regular Updates**
+```bash
+# Keep dependencies updated
+pip install --upgrade -r requirements.txt
+docker-compose pull
+```
+
+## Known Security Considerations
+
+### 1. Content Validation
+- **Risk**: Malicious content could be fetched
+- **Mitigation**: MIME type whitelist, size limits
+- **Action**: Only allow trusted content types
+
+### 2. Proxy Bypass
+- **Risk**: Requests could bypass proxy
+- **Mitigation**: Enforce proxy at application level
+- **Action**: Set `PROXY__PROXY_ENABLED=true`
+
+### 3. DoS via Large Files
+- **Risk**: Large files could consume resources
+- **Mitigation**: Size limits enforced
+- **Action**: Set appropriate `FETCHER__MAX_SIZE`
+
+### 4. Torrent Privacy
+- **Risk**: Public torrents leak IP addresses
+- **Mitigation**: Private torrents by default
+- **Action**: Keep `TORRENT__PRIVATE_TRACKER=true`
+
+### 5. Information Disclosure
+- **Risk**: Error messages could reveal system info
+- **Mitigation**: Generic error messages in production
+- **Action**: Set `DEBUG=false`
+
+## Security Checklist for Production
+
+- [ ] Authentication enabled (`SECURITY__AUTH_ENABLED=true`)
+- [ ] Strong HMAC secret set (32+ bytes)
+- [ ] HTTPS/TLS configured on reverse proxy
+- [ ] Proxy/VPN enforced for all fetches
+- [ ] SSL verification enabled
+- [ ] MIME whitelist configured
+- [ ] Rate limiting enabled
+- [ ] Private torrents enabled
+- [ ] Encryption enabled
+- [ ] Debug mode disabled
+- [ ] Sensitive logging masked
+- [ ] Firewall configured
+- [ ] Regular security updates scheduled
+- [ ] Monitoring and alerting configured
+- [ ] Backup strategy implemented
+
+## Contact
+
+For security concerns, contact:
+- GitHub Security: Use "Security" tab
+- Maintainer: [Email to be added]
+
+## Acknowledgments
+
+We appreciate responsible disclosure and will acknowledge security researchers who help improve ProxyTorrent's security.

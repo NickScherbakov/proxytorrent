@@ -1,6 +1,42 @@
+# Web framework
+fastapi==0.109.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# Async and HTTP
 aiohttp==3.9.4
 aiofiles==23.2.1
+httpx==0.25.1
+
+# Database
+sqlalchemy==2.0.23
+alembic==1.12.1
+aiosqlite==0.19.0
+asyncpg==0.29.0
+
+# BitTorrent - using official python bindings
+# Note: python-libtorrent needs to be built or installed via system package
+# For Docker, we'll compile from source or use pre-built wheels
 libtorrent==2.0.9
-requests==2.31.0
+
+# Caching and queue
+redis==5.0.1
+hiredis==2.2.3
+
+# Authentication and security
+python-jose[cryptography]==3.4.0
+passlib[bcrypt]==1.7.4
+pydantic[email]==2.5.0
+pydantic-settings==2.1.0
+
+# Monitoring and logging
+prometheus-client==0.19.0
+structlog==23.2.0
+
+# HTTP proxy support
+aiohttp-socks==0.8.4
+python-socks[asyncio]==2.4.3
+
+# Utilities
 python-dotenv==1.0.0
-pysocks==1.7.1
+click==8.1.7
